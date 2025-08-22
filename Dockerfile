@@ -1,21 +1,34 @@
-# Use the official Python image as the base
-FROM python:3.10-slim
+# Use official Python 3.11 image as base
+FROM python:3.11-slim
 
-# Set the working directory inside the container
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory inside container
 WORKDIR /app
 
-# Install system dependencies needed for the database connector
-RUN apt-get update && apt-get install -y libpq-dev gcc
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file and install Python dependencies
+# Copy requirements first (for caching)
 COPY requirements.txt .
+
+# Upgrade pip and install Python dependencies
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Copy the rest of the app code
 COPY . .
 
-# Expose the port your Django app runs on (e.g., 8000)
+# Collect static files (optional, adjust if you handle static differently)
+RUN python manage.py collectstatic --noinput
+
+# Expose port 8000
 EXPOSE 8000
 
-# Run the Django development server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Run the app with Gunicorn
+CMD ["gunicorn", "promed_backend_api.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
