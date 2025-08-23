@@ -235,18 +235,43 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'vastyle2010@gmail.com'
 
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-DEFAULT_FILE_STORAGE = 'promed_backend_api.storage_backends.AzureMediaStorage'
-STATICFILES_STORAGE = 'promed_backend_api.storage_backends.AzureStaticStorage'
+# STATIC_URL = 'static/'
+# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# DEFAULT_FILE_STORAGE = 'promed_backend_api.storage_backends.AzureMediaStorage'
+# STATICFILES_STORAGE = 'promed_backend_api.storage_backends.AzureStaticStorage'
 
-AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
-AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
-AZURE_CONTAINER = os.getenv('AZURE_CONTAINER')
-AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
-AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
-MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
+# AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
+# AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
+# AZURE_CONTAINER = os.getenv('AZURE_CONTAINER')
+# AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
+# AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
+# MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
+
+# # Azure Storage Toggle
+# USE_AZURE_STORAGE = os.getenv('USE_AZURE_STORAGE', 'False') == 'True'
+
+USE_AZURE_STORAGE = os.getenv('USE_AZURE_STORAGE', 'False') == 'True'
+
+if USE_AZURE_STORAGE:
+    AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
+    AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
+    AZURE_CONTAINER = os.getenv('AZURE_CONTAINER')
+    AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
+    AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
+
+    MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
+
+    DEFAULT_FILE_STORAGE = 'promed_backend_api.storage_backends.AzureMediaStorage'
+    STATICFILES_STORAGE = 'promed_backend_api.storage_backends.AzureStaticStorage'
+    STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
+else:
+    STATIC_URL = '/static/'
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    MEDIA_URL = '/media/'
 
 TWILIO_VERIFY_SERVICE_SID = 'VA0ef166324756821f432fe9a3bf03ef57'  
 
