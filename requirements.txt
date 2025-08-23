@@ -21,7 +21,7 @@ Django==5.2
 django-anymail==10.2
 django-ckeditor-5==0.2.18
 django-cors-headers==3.14.0
-django-jazzmin==2.5.0
+django-jazzmin==2.4.0
 django-phonenumber-field==8.1.0
 django-sendgrid-v5==1.3.0
 django-storages==1.12.3
