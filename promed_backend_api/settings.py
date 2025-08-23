@@ -22,6 +22,9 @@ DEBUG = True
 
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = ['.onrender.com']
+CSRF_TRUSTED_ORIGINS = [
+    "https://promedhealthplus-portal-api-1.onrender.com",
+]
 
 USER_APPS = [
     'provider_auth.apps.ProviderAuthConfig',
