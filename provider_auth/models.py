@@ -23,7 +23,7 @@ def generate_code():
 class User(AbstractUser):
     username = models.CharField(unique=True, max_length=255)
     email = models.EmailField(unique=True)
-    # full_name = models.CharField(max_length=255)
+    full_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     otp = models.CharField(max_length=100, null=True, blank=True)
     refresh_token = models.CharField(max_length=1000, null=True, blank=True)
@@ -36,17 +36,14 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return f'{self.email} | {self.date_joined}'
-    
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip()
 
     def save(self, *args, **kwargs):
-        if not self.username: # Check if username is truly empty/None
+        if not self.username:
             self.username = self.email.split('@')[0] if '@' in self.email else self.email
-        if not self.full_name: 
-            self.full_name = self.username
+        if not self.full_name:
+            self.full_name = f"{self.first_name} {self.last_name}".strip() or self.username
         super().save(*args, **kwargs)
+
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
