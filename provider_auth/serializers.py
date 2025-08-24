@@ -1,4 +1,6 @@
-from .models import User, Profile
+# provider_auth/serializers.py
+
+from .models import User, Profile, COUNTRY_CODE_CHOICES
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
@@ -6,32 +8,28 @@ from django.contrib.auth.password_validation import validate_password
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
-        """
-            Overrides the default get_token method to include additional user-specific
-            data in the JWT payload. This method is called when a new token is generated
-            (e.g., during user login).
-
-            Args:
-                user: The authenticated Django user object.
-
-            Returns:
-                A JWT token instance (a dictionary-like object) with custom claims added.
-        """
         token = super().get_token(user)
         token['full_name'] = user.full_name
         token['email'] = user.email
         token['username'] = user.username
-
-        # Return the modified token.
+        # Add new fields to the token
+        token['phone_number'] = str(user.phone_number) if user.phone_number else None
+        token['country_code'] = user.country_code
         return token
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
-    
+    # Define a serializer field for the country code choices
+    country_code = serializers.ChoiceField(choices=COUNTRY_CODE_CHOICES, required=False)
+
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'password', 'password2',)
+        fields = ('email', 'full_name', 'phone_number', 'country_code', 'password', 'password2')
+        extra_kwargs = {
+            'phone_number': {'required': False},
+            'country_code': {'required': False},
+        }
 
     def validate(self, attr):
         if attr['password'] != attr['password2']:
@@ -41,10 +39,19 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password')
         validated_data.pop('password2')
+        
+        # Pop the new fields
+        phone_number = validated_data.pop('phone_number', None)
+        country_code = validated_data.pop('country_code', None)
+
         if 'username' not in validated_data or not validated_data['username']:
             validated_data['username'] = validated_data['email'].split('@')[0] if '@' in validated_data['email'] else validated_data['email']
 
-        user = User.objects.create(**validated_data)
+        user = User.objects.create(
+            phone_number=phone_number,
+            country_code=country_code,
+            **validated_data
+        )
         user.set_password(password)
         user.save()
         return user
@@ -52,8 +59,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
-        fields = ('id', 'email', 'full_name', 'username')
+        fields = ('id', 'email', 'full_name', 'username', 'phone_number', 'country_code')
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer
@@ -67,5 +73,3 @@ class SendCodeSerializer(serializers.Serializer):
 class VerifyCodeSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6)
     method = serializers.ChoiceField(choices=['email', 'sms'])
-
-
