@@ -10,6 +10,10 @@ from io import BytesIO
 from datetime import datetime
 from azure.storage.blob import BlobServiceClient
 from django.core.files.storage import default_storage
+
+class GenerateSASURLSerializer(serializers.Serializer):
+    blob_name = serializers.CharField()
+    container_name = serializers.CharField()
 class ProviderFormSerializer(serializers.ModelSerializer):
     class Meta:
         model = api_models.ProviderForm

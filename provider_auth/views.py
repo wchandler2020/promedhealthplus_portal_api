@@ -30,34 +30,38 @@ class MyTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = request.user
-        # Issue tokens immediately
+        user = serializer.user
         refresh = RefreshToken.for_user(user)
         access = str(refresh.access_token)
-        # Create MFA code and send it
         method = request.data.get('method', 'email')
         code = str(random.randint(100000, 999999))
         session_id = str(uuid.uuid4())
         twilio_api_key = os.getenv('TWILIO_API_KEY')
         twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
         api_models.Verification_Code.objects.create(user=user, code=code, method=method, session_id=session_id)
-        # Send code via email or SMS
-        phone_number = f"{user.country_code}{user.phone_number.national_number}"
-        print('Phone number: ', phone_number)
-        if method == 'sms':
-            client = Client(twilio_api_key, twilio_secret_key)
-            client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verifications.create(
-                to=phone_number,
-                channel='sms'
-            )
-        elif method == 'email':
+
+        # Add a check to see if the user has a phone number
+        if user.phone_number:
+            phone_number = user.phone_number
+            print('Phone number: ', phone_number)
+            if method == 'sms':
+                client = Client(twilio_api_key, twilio_secret_key)
+                client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verifications.create(
+                    to=phone_number,
+                    channel='sms'
+                )
+
+        # Continue with email logic regardless of phone number
+        if method == 'email':
             send_mail(
                 subject='Login Verification Code',
                 message=f'Your code is {code}',
-                from_email='noreply@example.com',
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email]
             )
-        request.session['mfa'] = False  # Mark session as requiring MFA
+
+        request.session['mfa'] = False
+
         return Response({
             'access': str(access),
             'refresh': str(refresh),
@@ -91,7 +95,8 @@ class VerifyCodeView(generics.CreateAPIView):
         if not valid_code:
             return Response({'verified': False, 'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
         # Mark user as verified
-        phone_number = f"{user.country_code}{user.phone_number.national_number}"
+        phone_number = user.phone_number
+        print('Verify Phone number: ', phone_number)
         client = Client(twilio_api_key, twilio_secret_key)
         verification_check = client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verification_checks.create(
         to=phone_number,
@@ -118,18 +123,21 @@ class ProviderProfileView(generics.RetrieveAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-# provider_auth/views.py
-
-# ... (other imports and views) ...
-
 class ContactRepView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = api_serializers.ContactRepSerializer  # ✅ Add this
 
     def create(self, request, *args, **kwargs):
-        user = request.user
-        profile = user.profile
+        if getattr(self, 'swagger_fake_view', False):  # ✅ Prevent drf_yasg crash
+            return Response(status=status.HTTP_200_OK)
 
-        if not profile.sales_rep:
+        user = request.user
+
+        if not user.is_authenticated:
+            return Response({'error': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        profile = getattr(user, 'profile', None)
+        if not profile or not profile.sales_rep:
             return Response(
                 {'error': 'No sales representative assigned to this provider.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -138,7 +146,6 @@ class ContactRepView(generics.CreateAPIView):
         sales_rep = profile.sales_rep
         rep_email = sales_rep.email
         rep_name = sales_rep.name
-        print(user.email)
 
         sender_name = request.data.get('name', user.full_name)
         sender_phone = request.data.get('phone', user.phone_number)
@@ -165,11 +172,10 @@ class ContactRepView(generics.CreateAPIView):
         )
 
         try:
-            # Create a set to automatically remove duplicates, then convert back to a list
             recipient_list = list(set([
                 rep_email,
-                'william.d.chandler1@gmail.com', 
-                'harold@promedhealthplus.com', 
+                'william.d.chandler1@gmail.com',
+                'harold@promedhealthplus.com',
                 'kayvoncrenshaw@gmail.com',
                 'william.dev@promedhealthplus.com'
             ]))
@@ -181,15 +187,10 @@ class ContactRepView(generics.CreateAPIView):
                 recipient_list,
                 fail_silently=False,
             )
-            return Response(
-                {'success': 'Message sent successfully.'},
-                status=status.HTTP_200_OK
-            )
+            return Response({'success': 'Message sent successfully.'}, status=status.HTTP_200_OK)
+
         except Exception as e:
             print(f"Error sending email: {e}")
-            return Response(
-                {'error': 'Failed to send message via email.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            
+            return Response({'error': 'Failed to send message via email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
