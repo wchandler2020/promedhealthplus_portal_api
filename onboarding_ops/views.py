@@ -30,6 +30,8 @@ class ProviderFormListCreate(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return api_models.ProviderForm.objects.none()
         return api_models.ProviderForm.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -40,6 +42,8 @@ class ProviderFormDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return api_models.ProviderForm.objects.none()
         return api_models.ProviderForm.objects.filter(user=self.request.user)
 
 # CRUD Views for ProviderDocument
@@ -48,7 +52,10 @@ class ProviderDocumentListCreate(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return api_models.ProviderDocument.objects.none()
         return api_models.ProviderDocument.objects.filter(user=self.request.user)
+
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -58,6 +65,8 @@ class ProviderDocumentDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return api_models.ProviderDocument.objects.none()
         return api_models.ProviderDocument.objects.filter(user=self.request.user)
 
 # Mark form as completed
@@ -67,7 +76,10 @@ class ProviderFormComplete(generics.UpdateAPIView):
     http_method_names = ['patch']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return api_models.ProviderForm.objects.none()
         return api_models.ProviderForm.objects.filter(user=self.request.user)
+
 
     def partial_update(self, request, *args, **kwargs):
         request.data['completed'] = True
@@ -79,7 +91,10 @@ class UploadFilledPDF(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return api_models.ProviderForm.objects.none()
         return api_models.ProviderForm.objects.filter(user=self.request.user)
+
 
 # Context injector for serializer
 class FillPreexistingPDF(generics.CreateAPIView):
@@ -104,30 +119,28 @@ def serve_blank_form(request, form_type):
     
 class GenerateSASURLView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = api_serializers.GenerateSASURLSerializer  # ✅ Add this
     lookup_url_kwarg = 'blob_name'
 
     def retrieve(self, request, *args, **kwargs):
-        # Capture the blob_name and container_name from the URL
+        if getattr(self, 'swagger_fake_view', False):  # ✅ Optional protection
+            return Response(status=status.HTTP_200_OK)
+
         blob_name = kwargs.get(self.lookup_url_kwarg)
         container_name = kwargs.get('container_name')
 
-        # Strip any trailing slashes from the blob_name.
-        # This is a crucial step to ensure the name matches the blob in Azure.
         if blob_name and blob_name.endswith('/'):
             blob_name = blob_name.rstrip('/')
-        
+
         if not blob_name or not container_name:
             raise NotFound("Container name or blob name not provided.")
 
         try:
-            # Pass the corrected blob_name and container_name to the utility function
             sas_url = generate_sas_url(blob_name, container_name)
             return Response({"sas_url": sas_url})
         except FileNotFoundError:
-            # Return a 404 for a specific "file not found" case
             return Response({"error": f"Blob '{blob_name}' not found in container '{container_name}'"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            # Catch other potential errors and return a 500
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Stream PDF directly from Azure blob using SAS

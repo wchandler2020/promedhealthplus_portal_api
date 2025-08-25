@@ -73,3 +73,9 @@ class SendCodeSerializer(serializers.Serializer):
 class VerifyCodeSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6)
     method = serializers.ChoiceField(choices=['email', 'sms'])
+    
+class ContactRepSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False)
+    phone = serializers.CharField(required=False)
+    email = serializers.EmailField(required=False)
+    message = serializers.CharField(required=True)
