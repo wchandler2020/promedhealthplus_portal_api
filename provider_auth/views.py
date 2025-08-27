@@ -8,7 +8,7 @@ from rest_framework import generics, status, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from django.core.mail import EmailMultiAlternatives
-from .models import User, Profile
+from .models import User, Profile, EmailVerificationToken # ⬅️ IMPORT THE NEW MODEL
 from provider_auth import models as api_models
 from provider_auth import serializers as api_serializers
 from django.template.loader import render_to_string
@@ -42,7 +42,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
         # Add a check to see if the user has a phone number
         if user.phone_number:
-            phone_number = user.phone_number
+            phone_number = str(user.phone_number)
             print('Phone number: ', phone_number)
             if method == 'sms':
                 client = Client(twilio_api_key, twilio_secret_key)
@@ -56,7 +56,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
             send_mail(
                 subject='Login Verification Code',
                 message=f'Your code is {code}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email = settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email]
             )
 
@@ -74,7 +74,48 @@ class RegisterUser(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [AllowAny]
     serializer_class = api_serializers.RegisterSerializer
-     
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        token, created = EmailVerificationToken.objects.get_or_create(user=user)
+        verification_link = f"http://127.0.0.1:8000/api/v1/verify-email/{token.token}/"
+
+        email_html_message = render_to_string(
+            'email_verification.html',
+            {
+                'user': user,
+                'verification_link': verification_link
+            }
+        )
+        send_mail(
+            subject='Verify Your Email Address',
+            message=f"Click the link to verify your email: {verification_link}",
+            html_message=email_html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False
+        )
+
+
+class VerifyEmailView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        try:
+            verification_token = EmailVerificationToken.objects.get(token=token)
+            user = verification_token.user
+            if user.is_verified:
+                return Response({"message": "Email already verified."}, status=status.HTTP_200_OK)
+
+            user.is_verified = True
+            user.save()
+            verification_token.delete()
+            return Response({"message": "Email successfully verified. You can now log in."}, status=status.HTTP_200_OK)
+
+        except EmailVerificationToken.DoesNotExist:
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class VerifyCodeView(generics.CreateAPIView):
     serializer_class = api_serializers.VerifyCodeSerializer
     permission_classes = [AllowAny]
@@ -95,8 +136,7 @@ class VerifyCodeView(generics.CreateAPIView):
         if not valid_code:
             return Response({'verified': False, 'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
         # Mark user as verified
-        phone_number = user.phone_number
-        print('Verify Phone number: ', phone_number)
+        phone_number = str(user.phone_number)
         client = Client(twilio_api_key, twilio_secret_key)
         verification_check = client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verification_checks.create(
         to=phone_number,
@@ -109,20 +149,20 @@ class VerifyCodeView(generics.CreateAPIView):
 class ProviderProfileView(generics.RetrieveAPIView):
     serializer_class = api_serializers.ProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get_object(self):
         return self.request.user.profile
-    
+
     def put(self, request, *args, **kwargs):
-        profile = self.get.object()
+        profile = self.get_object()
         serializer = self.serializer_class(profile, data=request.data, partial=True)
-        
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 class ContactRepView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = api_serializers.ContactRepSerializer  # ✅ Add this
@@ -191,6 +231,5 @@ class ContactRepView(generics.CreateAPIView):
 
         except Exception as e:
             print(f"Error sending email: {e}")
-            return Response({'error': 'Failed to send message via email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    
+            return Response({'error': 'Failed to send message via email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

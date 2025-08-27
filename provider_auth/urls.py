@@ -3,7 +3,6 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from provider_auth import views as api_views
 
 
-
 urlpatterns = [
     path('provider/token/', api_views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('provider/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -12,5 +11,6 @@ urlpatterns = [
     path('verify-code/', api_views.VerifyCodeView.as_view(), name='verify-code'),
     path('provider/profile/', api_views.ProviderProfileView.as_view(), name='provider-profile'),
     path('provider/contact-rep/', api_views.ContactRepView.as_view(), name='contact-rep'),
-    
+    # ⬅️ ADD THIS NEW PATH
+    path('verify-email/<uuid:token>/', api_views.VerifyEmailView.as_view(), name='verify-email'),
 ]

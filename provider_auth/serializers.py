@@ -1,9 +1,8 @@
-# provider_auth/serializers.py
-
 from .models import User, Profile, COUNTRY_CODE_CHOICES
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.models import auth
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -16,6 +15,17 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['phone_number'] = str(user.phone_number) if user.phone_number else None
         token['country_code'] = user.country_code
         return token
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        user = auth.authenticate(
+            request=self.context.get('request'),
+            email=attrs['email'],
+            password=attrs['password']
+        )
+        if user and not user.is_verified:
+            raise serializers.ValidationError({"detail": "Email not verified. Please check your inbox for a verification link."})
+        return data
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -39,7 +49,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password')
         validated_data.pop('password2')
-        
+
         # Pop the new fields
         phone_number = validated_data.pop('phone_number', None)
         country_code = validated_data.pop('country_code', None)
@@ -62,18 +72,25 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'full_name', 'username', 'phone_number', 'country_code')
 
 class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer
+    user = UserSerializer(read_only=True)
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = Profile
         fields = '__all__'
-        
+
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
+
 class SendCodeSerializer(serializers.Serializer):
     method = serializers.ChoiceField(choices=['email', 'sms'])
 
 class VerifyCodeSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6)
     method = serializers.ChoiceField(choices=['email', 'sms'])
-    
+
 class ContactRepSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
     phone = serializers.CharField(required=False)

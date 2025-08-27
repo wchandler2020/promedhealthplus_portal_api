@@ -7,6 +7,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 import dj_database_url
 
 load_dotenv()
+
 sentry_sdk.init(
     dsn="https://e8b8032c2344202bda64fc938e4dc5db@o4509803038113792.ingest.us.sentry.io/4509803039031296",
     integrations=[DjangoIntegration()],
@@ -20,8 +21,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = True
 
-# ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['.onrender.com', '127.0.0.1', 'localhost', 'pythonanywhere.com']
+ALLOWED_HOSTS = ['.onrender.com', '127.0.0.1', 'localhost', 'pythonanywhere.com', 'wchandler2025.pythonanywhere.com']
 CSRF_TRUSTED_ORIGINS = [
     "https://promedhealthplus-portal-api-1.onrender.com",
 ]
@@ -91,22 +91,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'promed_backend_api.wsgi.application'
 
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('DB_NAME'),
-#         'USER': os.getenv('DB_USER'),
-#         'PASSWORD': os.getenv('DB_PASSWORD'),
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
+#     'default': dj_database_url.config(
+#         default=os.getenv('NEON_DB_CONN_STRING'),
+#         conn_max_age=600,
+#         ssl_require=True
+#     )
 # }
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('NEON_DB_CONN_STRING'),
-        conn_max_age=600,
-        ssl_require=True
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -187,7 +187,6 @@ JAZZMIN_SETTINGS  = {
     "welcome_sign": "Welcome to ProMed Health Plus Portal Admin",
     "copyright": "ProMed Health Plus Portal",
     "show_ui_builder": True,
-
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -235,44 +234,41 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'vastyle2010@gmail.com'
 
-# STATIC_URL = 'static/'
-# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# DEFAULT_FILE_STORAGE = 'promed_backend_api.storage_backends.AzureMediaStorage'
-# STATICFILES_STORAGE = 'promed_backend_api.storage_backends.AzureStaticStorage'
+# Azure Storage Environment Configs
+# Azure Storage Environment Configs
+AZURE_ACCOUNT_NAME='promedhealthplus'
+AZURE_ACCOUNT_KEY=os.getenv('AZURE_ACCOUNT_KEY')
+AZURE_CONNECTION_STRING=os.getenv('AZURE_CONNECTION_STRING')
 
-# AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
-# AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
-# AZURE_CONTAINER = os.getenv('AZURE_CONTAINER')
-# AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
-# AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
-# MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
+# Always define STATIC_ROOT. It's the local staging folder for collectstatic.
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build')
 
-# # Azure Storage Toggle
-# USE_AZURE_STORAGE = os.getenv('USE_AZURE_STORAGE', 'False') == 'True'
+# Use the new STORAGES dictionary for Django 4.2+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.azure_storage.AzureStorage",
+        "OPTIONS": {
+            "account_name": AZURE_ACCOUNT_NAME,
+            "account_key": AZURE_ACCOUNT_KEY,
+            "azure_container": 'media',
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.azure_storage.AzureStorage",
+        "OPTIONS": {
+            "account_name": AZURE_ACCOUNT_NAME,
+            "account_key": AZURE_ACCOUNT_KEY,
+            "azure_container": 'static',
+        },
+    },
+}
 
-USE_AZURE_STORAGE = os.getenv('USE_AZURE_STORAGE', 'False') == 'True'
+# The URLs are still needed to correctly serve the files
+AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
+STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/static/'
+MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/media/'
 
-if USE_AZURE_STORAGE:
-    AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
-    AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
-    AZURE_CONTAINER = os.getenv('AZURE_CONTAINER')
-    AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
-    AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
 
-    MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
-
-    DEFAULT_FILE_STORAGE = 'promed_backend_api.storage_backends.AzureMediaStorage'
-    STATICFILES_STORAGE = 'promed_backend_api.storage_backends.AzureStaticStorage'
-    STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
-else:
-    STATIC_URL = '/static/'
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-    STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-    MEDIA_URL = '/media/'
-
-TWILIO_VERIFY_SERVICE_SID = 'VA0ef166324756821f432fe9a3bf03ef57'  
+TWILIO_VERIFY_SERVICE_SID = 'VA0ef166324756821f432fe9a3bf03ef57'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
