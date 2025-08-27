@@ -1,3 +1,5 @@
+# provider_auth/models.py
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
@@ -6,6 +8,7 @@ from django.utils import timezone
 from sales_rep.models import SalesRep
 from phonenumber_field.modelfields import PhoneNumberField
 import random
+import uuid
 
 # For reference/display purposes only — NOT used to prefix phone numbers
 COUNTRY_CODE_CHOICES = (
@@ -33,19 +36,14 @@ ROLES = (
 def generate_code():
     return str(random.randint(100000, 999999))
 
-
 class User(AbstractUser):
     username = models.CharField(unique=True, max_length=255)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, null=True, blank=True)
-
-    # ✅ Ensure this stores a full E.164 number (e.g., +15551234567)
     phone_number = PhoneNumberField(null=True, blank=True)
-
-    # ✅ Just for reference/display – not used for combining with phone_number
     country_code = models.CharField(
-        max_length=5, 
-        choices=COUNTRY_CODE_CHOICES, 
+        max_length=5,
+        choices=COUNTRY_CODE_CHOICES,
         default='+1',
         help_text="Country dial code for reference (e.g. +1 for US)."
     )
@@ -73,7 +71,12 @@ class User(AbstractUser):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     sales_rep = models.ForeignKey(SalesRep, on_delete=models.SET_NULL, null=True, blank=True, related_name="providers")
-    image = models.FileField(upload_to='images', default=f'{settings.MEDIA_URL}images/default_user.jpg', null=True, blank=True)
+    image = models.FileField(
+    upload_to='images',
+    default='default_user.jpg',
+    null=True,
+    blank=True
+    )
     role = models.CharField(max_length=200, choices=ROLES, null=True, blank=True)
     facility = models.CharField(max_length=200, null=True, blank=True)
     facility_phone_number = models.CharField(max_length=20, null=True, blank=True)
@@ -103,8 +106,6 @@ def post_save_profile(sender, instance, **kwargs):
 
 post_save.connect(create_user_profile, sender=User)
 post_save.connect(post_save_profile, sender=User)
-
-
 class Verification_Code(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     code = models.CharField(max_length=6)
@@ -114,3 +115,12 @@ class Verification_Code(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
+
+#Email Verification
+class EmailVerificationToken(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Token for {self.user.email}"
