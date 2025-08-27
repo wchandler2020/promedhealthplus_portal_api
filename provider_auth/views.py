@@ -1,4 +1,3 @@
-## provider_auth.views
 import random
 import uuid
 
@@ -71,18 +70,19 @@ class MyTokenObtainPairView(TokenObtainPairView):
             'detail': 'Verification code sent.'
         }, status=status.HTTP_200_OK)
 
+
 class RegisterUser(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [AllowAny]
     serializer_class = api_serializers.RegisterSerializer
-
     def perform_create(self, serializer):
         user = serializer.save()
         token, created = EmailVerificationToken.objects.get_or_create(user=user)
-        verification_link = f"http://127.0.0.1:8000/api/v1/verify-email/{token.token}/"
+
+        verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
 
         email_html_message = render_to_string(
-            'email_verification.html',
+            'provider_auth/email_verification.html',
             {
                 'user': user,
                 'verification_link': verification_link
@@ -164,18 +164,25 @@ class ProviderProfileView(generics.RetrieveAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
+from datetime import datetime
+
+from provider_auth import serializers as api_serializers
+
+
 class ContactRepView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = api_serializers.ContactRepSerializer  # ✅ Add this
+    serializer_class = api_serializers.ContactRepSerializer
 
     def create(self, request, *args, **kwargs):
-        if getattr(self, 'swagger_fake_view', False):  # ✅ Prevent drf_yasg crash
+        if getattr(self, 'swagger_fake_view', False):  # Prevent drf_yasg crash
             return Response(status=status.HTTP_200_OK)
 
         user = request.user
-
-        if not user.is_authenticated:
-            return Response({'error': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         profile = getattr(user, 'profile', None)
         if not profile or not profile.sales_rep:
@@ -184,6 +191,7 @@ class ContactRepView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Extract data
         sales_rep = profile.sales_rep
         rep_email = sales_rep.email
         rep_name = sales_rep.name
@@ -200,37 +208,39 @@ class ContactRepView(generics.CreateAPIView):
             )
 
         subject = f"New Message from Provider: {sender_name}"
-        email_message = (
-            f"Hello {rep_name},\n\n"
-            f"You have a new message from a provider on the ProMed Health Plus Portal.\n\n"
-            f"**Provider Details:**\n"
-            f"Name: {sender_name}\n"
-            f"Email: {sender_email}\n"
-            f"Phone: {sender_phone}\n\n"
-            f"**Message:**\n"
-            f"{message_body}\n\n"
-            f"Please respond to the provider at your earliest convenience."
-        )
+
+        # Render HTML email template
+        html_message = render_to_string('provider_auth/provider_inquiry.html', {
+            'rep_name': rep_name,
+            'sender_name': sender_name,
+            'sender_email': sender_email,
+            'sender_phone': sender_phone,
+            'message_body': message_body,
+            'year': datetime.now().year
+        })
+
+        recipient_list = list(set([
+            rep_email,
+            'william.d.chandler1@gmail.com',
+            'harold@promedhealthplus.com',
+            'kayvoncrenshaw@gmail.com',
+            'william.dev@promedhealthplus.com'
+        ]))
 
         try:
-            recipient_list = list(set([
-                rep_email,
-                'william.d.chandler1@gmail.com',
-                'harold@promedhealthplus.com',
-                'kayvoncrenshaw@gmail.com',
-                'william.dev@promedhealthplus.com'
-            ]))
-
             send_mail(
-                subject,
-                email_message,
-                settings.DEFAULT_FROM_EMAIL,
-                recipient_list,
+                subject=subject,
+                message=message_body,  # plain-text fallback
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                html_message=html_message,
                 fail_silently=False,
             )
             return Response({'success': 'Message sent successfully.'}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Error sending email: {e}")
-
-            return Response({'error': 'Failed to send message via email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print(f"Error sending provider inquiry email: {e}")
+            return Response(
+                {'error': 'Failed to send message via email.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
