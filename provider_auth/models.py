@@ -73,7 +73,7 @@ class Profile(models.Model):
     sales_rep = models.ForeignKey(SalesRep, on_delete=models.SET_NULL, null=True, blank=True, related_name="providers")
     image = models.FileField(
     upload_to='images',
-    default='default_user.jpg',
+    default='images/default_user.jpg',
     null=True,
     blank=True
     )
