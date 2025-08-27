@@ -1,3 +1,4 @@
+#settings.py
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -236,7 +237,8 @@ DEFAULT_FROM_EMAIL = 'vastyle2010@gmail.com'
 
 # Azure Storage Environment Configs
 # Azure Storage Environment Configs
-AZURE_ACCOUNT_NAME='promedhealthplus'
+
+AZURE_ACCOUNT_NAME=os.getenv('AZURE_ACCOUNT_NAME')
 AZURE_ACCOUNT_KEY=os.getenv('AZURE_ACCOUNT_KEY')
 AZURE_CONNECTION_STRING=os.getenv('AZURE_CONNECTION_STRING')
 

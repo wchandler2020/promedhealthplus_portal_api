@@ -1,5 +1,4 @@
 # provider_auth/models.py
-
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
@@ -36,6 +35,7 @@ ROLES = (
 def generate_code():
     return str(random.randint(100000, 999999))
 
+#sends verify email from here
 class User(AbstractUser):
     username = models.CharField(unique=True, max_length=255)
     email = models.EmailField(unique=True)
