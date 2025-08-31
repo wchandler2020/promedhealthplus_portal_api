@@ -33,6 +33,9 @@ USER_APPS = [
     'patients.apps.PatientsConfig',
     'sales_rep.apps.SalesRepConfig',
     'notes.apps.NotesConfig',
+    'orders.apps.OrdersConfig',
+    'order_items.apps.OrderItemsConfig',
+    'cart.apps.CartConfig',
 ]
 
 THIRD_PARTY_APPS = [
