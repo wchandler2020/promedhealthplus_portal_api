@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import auth
+from orders.models import Order, OrderItem
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -97,3 +98,21 @@ class ContactRepSerializer(serializers.Serializer):
     phone = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
     message = serializers.CharField(required=True)
+    
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['product_name', 'manufacturer', 'quantity', 'mft_price']
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True)
+    class Meta:
+        model = Order
+        fields = '__all__'
+        read_only_fields = ['id', 'provider', 'total_price', 'status', 'created_at']  # fixed 'total_price' typo
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        order = Order.objects.create(**validated_data)  # <- FIXED TYPO here
+        for item_data in items_data:
+            OrderItem.objects.create(order=order, **item_data)
+        return order
