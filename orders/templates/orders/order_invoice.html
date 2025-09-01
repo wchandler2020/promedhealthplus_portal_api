@@ -54,7 +54,8 @@
         margin-top: 16px;
       }
 
-      th, td {
+      th,
+      td {
         border: 1px solid #d1d5db;
         padding: 8px;
         text-align: left;
@@ -87,9 +88,14 @@
       </div>
 
       <div class="content">
-        <p><strong>Provider:</strong> {{ order.provider.full_name }} ({{ order.provider.email }})</p>
+        <p>
+          <strong>Provider:</strong> {{ order.provider.full_name }} ({{
+          order.provider.email }})
+        </p>
         <p><strong>Facility:</strong> {{ order.facility_name }}</p>
-        <p><strong>Date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}</p>
+        <p>
+          <strong>Date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}
+        </p>
 
         <div class="invoice-info">
           <h3>Order Details</h3>
@@ -109,8 +115,8 @@
                 <td>{{ item.product_name }}</td>
                 <td>{{ item.manufacturer }}</td>
                 <td>{{ item.quantity }}</td>
-                <td>${{ item.mft_price }}</td>
-                <td>${{ item.quantity|floatformat:2|add:"0"|floatformat:2|floatformat:""|add:item.mft_price|floatformat:2 }}</td>
+                <td>${{ item.mft_price|floatformat:2 }}</td>
+                <td>${{ item.total_price|floatformat:2 }}</td>
               </tr>
               {% endfor %}
             </tbody>
