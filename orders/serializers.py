@@ -2,20 +2,6 @@ from rest_framework import serializers
 from product.models import Product, ProductVariant
 from .models import OrderItem, Order
 from decimal import Decimal
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-    variant = serializers.PrimaryKeyRelatedField(queryset=ProductVariant.objects.all()) # Add this line
-
-    class Meta:
-        model = OrderItem
-        fields = ['product', 'variant', 'quantity'] # Add 'variant' here
-
-from rest_framework import serializers
-from product.models import Product, ProductVariant
-from .models import OrderItem, Order
-from decimal import Decimal
-
 class OrderItemSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
     variant = serializers.PrimaryKeyRelatedField(queryset=ProductVariant.objects.all())
