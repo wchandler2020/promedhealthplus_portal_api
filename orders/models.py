@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from patients.models import Patient
 # Import the new Product model
-from product.models import Product
+from product.models import Product, ProductVariant
 from decimal import Decimal
 
 
@@ -34,13 +34,16 @@ class Order(models.Model):
         return f'Order# {self.id} for {self.patient}'
     class Meta:
         db_table = 'orders'
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, related_name='ordered_items')
+    variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, null=True, related_name='order_items')  # ✅ ADD THIS
     quantity = models.PositiveIntegerField(default=0)
     price_at_order = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    
+
     def __str__(self):
         return f'{self.quantity} of {self.product.name if self.product else "Deleted Product"}'
+
     class Meta:
-        db_table = 'order items'
+        db_table = 'order_items'  # ✅ fix typo: no spaces
