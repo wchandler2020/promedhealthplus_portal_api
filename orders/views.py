@@ -29,7 +29,7 @@ class CreateOrderView(generics.CreateAPIView):
             order.provider.email,
             sales_rep_email,
             settings.DEFAULT_FROM_EMAIL,
-            'william.d.chandler1@gmail.com',
+            'william.chandler21@yahoo.com',
             'harold@promedhealthplus.com',
             'kayvoncrenshaw@gmail.com',
             'william.dev@promedhealthplus.com'
