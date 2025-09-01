@@ -6,6 +6,7 @@ from weasyprint import HTML
 from io import BytesIO
 from django.core.mail import EmailMessage
 import orders.serializers as api_serializers
+from rest_framework.response import Response
 
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = api_serializers.OrderSerializer
