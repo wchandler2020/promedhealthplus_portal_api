@@ -57,7 +57,8 @@ class OrderItem(models.Model):
 
     @property
     def manufacturer(self):
-        return self.product.manufacturer.name if self.product and self.product.manufacturer else "Unknown"
+        return self.product.manufacturer if self.product and self.product.manufacturer else "Unknown"
+
 
     @property
     def mft_price(self):
