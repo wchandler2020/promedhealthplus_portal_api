@@ -1,15 +1,15 @@
 from rest_framework import serializers
-from product.models import Product
+from product.models import Product, ProductVariant
 from .models import OrderItem, Order
 from decimal import Decimal
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    # Use PrimaryKeyRelatedField for the product, as the client will send the product ID
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-    
+    variant = serializers.PrimaryKeyRelatedField(queryset=ProductVariant.objects.all()) # Add this line
+
     class Meta:
         model = OrderItem
-        fields = ['product', 'quantity']
+        fields = ['product', 'variant', 'quantity'] # Add 'variant' here
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
@@ -21,13 +21,16 @@ class OrderSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         items_data = validated_data.pop('items')
         order = Order.objects.create(**validated_data)
-        
+
         total_price = Decimal('0.00')
 
         for item_data in items_data:
-            product = item_data['product']  # Get the Product instance from the validated data
+            product = item_data['product']
+            variant = item_data['variant']  # Get the ProductVariant instance
             quantity = item_data['quantity']
-            price_at_order = product.mft_price * quantity # Calculate the total price for the item
+
+            # Use the price from the selected ProductVariant
+            price_at_order = variant.price * quantity 
 
             OrderItem.objects.create(
                 order=order,

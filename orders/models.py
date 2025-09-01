@@ -25,7 +25,7 @@ class Order(models.Model):
     street = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
     zip_code = models.CharField(max_length=20)
-    country = models.CharField(max_length=100)
+    country = models.CharField(max_length=100, null=True, blank=True)
     status = models.CharField(max_length=50, choices=ORDER_STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
