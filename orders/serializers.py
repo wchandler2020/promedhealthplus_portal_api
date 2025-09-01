@@ -20,26 +20,35 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
-        order = Order.objects.create(**validated_data)
 
-        total_price = Decimal('0.00')
+        total_price = Decimal('0.00')  # ← Calculate total before saving
+
+        # Temporarily hold order item instances
+        order_items = []
 
         for item_data in items_data:
             product = item_data['product']
-            variant = item_data['variant']  # Get the ProductVariant instance
+            variant = item_data['variant']
             quantity = item_data['quantity']
 
-            # Use the price from the selected ProductVariant
-            price_at_order = variant.price * quantity 
-
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=quantity,
-                price_at_order=price_at_order
-            )
+            price_at_order = variant.price * quantity
             total_price += price_at_order
 
-        order.total_price = total_price
-        order.save()
+            order_items.append({
+                'product': product,
+                'variant': variant,
+                'quantity': quantity,
+                'price_at_order': price_at_order
+            })
+
+        # Now we have the total_price — create the order
+        order = Order.objects.create(
+            **validated_data,
+            total_price=total_price  # ✅ explicitly set
+        )
+
+        # Save order items
+        for item in order_items:
+            OrderItem.objects.create(order=order, **item)
+
         return order
