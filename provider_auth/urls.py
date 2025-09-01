@@ -13,5 +13,5 @@ urlpatterns = [
     path('provider/profile/', api_views.ProviderProfileView.as_view(), name='provider-profile'),
     path('provider/contact-rep/', api_views.ContactRepView.as_view(), name='contact-rep'),
     path('verify-email/<uuid:token>/', api_views.VerifyEmailView.as_view(), name='verify-email'),
-    path('provider/orders/', api_views.CreateOrderView.as_view(), name='create-order')
+    
 ]

@@ -36,10 +36,8 @@ class Order(models.Model):
         db_table = 'orders'
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    # Link to the Product model instead of storing raw data
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, related_name='ordered_items')
     quantity = models.PositiveIntegerField(default=0)
-    # The price at the time of order is stored here to prevent changes if the product price changes later
     price_at_order = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     
     def __str__(self):

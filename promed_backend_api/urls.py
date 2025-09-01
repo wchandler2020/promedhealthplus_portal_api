@@ -32,10 +32,13 @@ urlpatterns = [
     # App URLs
     path('api/v1/', include('provider_auth.urls')),
     path('api/v1/', include('notes.urls')),
+    path('api/v1/', include('orders.urls')),
+    path('api/v1/', include('product.urls')),
     path('api/v1/patient/', include('patients.urls')),
 
    # Onboarding Docs
     path('api/v1/onboarding/', include('onboarding_ops.urls')),
+    
 ]
 
 # Serve media and static files in development
