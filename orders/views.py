@@ -33,7 +33,7 @@ class CreateOrderView(generics.CreateAPIView):
         subject = f"Invoice for Order #{order.id}"
 
         # Render HTML
-        html_content = render_to_string('email/order_invoice.html', {'order': order})
+        html_content = render_to_string('orders/order_invoice.html', {'order': order})
 
         # Generate PDF
         pdf_file = BytesIO()
