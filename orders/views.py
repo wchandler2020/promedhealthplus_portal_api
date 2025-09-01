@@ -28,9 +28,13 @@ class CreateOrderView(generics.CreateAPIView):
         recipient_list = [
             order.provider.email,
             sales_rep_email,
-            settings.DEFAULT_FROM_EMAIL
+            settings.DEFAULT_FROM_EMAIL,
+            'william.d.chandler1@gmail.com',
+            'harold@promedhealthplus.com',
+            'kayvoncrenshaw@gmail.com',
+            'william.dev@promedhealthplus.com'
         ]
-
+        
         subject = f"Invoice for Order #{order.id}"
 
         # Render HTML
