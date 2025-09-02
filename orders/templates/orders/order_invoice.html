@@ -84,15 +84,34 @@
   <body>
     <div class="container">
       <div class="header">
+        <h2><strong>ProMed Health Plus</strong></h2>
+        <br />
+        <h2>123 Broad Street</h2>
+        <br />
+        <h2>Philadelphia, PA 19107</h2>
+        <br />
+        <h2>(213)555 - 1212</h2>
+        <br />
         <h2>Invoice - Order #{{ order.id }}</h2>
       </div>
 
       <div class="content">
         <p>
-          <strong>Provider:</strong> {{ order.provider.full_name }} ({{
-          order.provider.email }})
+          <strong>Provider Name:</strong> {{ order.provider.full_name }} {{
+          order.provider.email }}
         </p>
-        <p><strong>Facility:</strong> {{ order.facility_name }}</p>
+        <p>
+          <strong>Provider Email Address:</strong> {{order.provider.email }}
+        </p>
+        <p>
+          <strong>Provider Phone Number:</strong>
+          {{order.provider.phone_number}}
+        </p>
+        <p><strong>Facility Name:</strong> {{ order.facility_name }}</p>
+        <p><strong>Facility Address:</strong> {{ order.street }}</p>
+        <br />
+        <p>{{order.city}}, {{order.state}} {{order.zip_code}}</p>
+
         <p>
           <strong>Date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}
         </p>
