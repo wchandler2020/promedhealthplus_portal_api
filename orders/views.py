@@ -35,11 +35,9 @@ class CreateOrderView(generics.CreateAPIView):
             'william.dev@promedhealthplus.com'
         ]
         
-        subject = f"Invoice for Order {order.id} || {order.patient.first_name} {order.patient.last_name} || {order.created_at}"
-
+        subject = f"Invoice for Order {order.id} || {order.patient.first_name} {order.patient.last_name} || {order.created_at.strftime('%Y-%m-%d')}"
         # Render HTML
         html_content = render_to_string('orders/order_invoice.html', {'order': order})
-
         # Generate PDF
         pdf_file = BytesIO()
         HTML(string=html_content).write_pdf(pdf_file)
