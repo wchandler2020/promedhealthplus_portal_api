@@ -91,7 +91,7 @@
         <p>123 Broad Street</p>
         <p>Philadelphia, PA 19107</p>
         <p>(213)555 - 1212</p>
-        <p>Invoice for Order - {{ order.patient.first_name }} {{order.patient.last_name}} || {{ order.created_at|date:"F j, Y, g:i a" }}</p>
+        <p>Invoice for Order - {{ order.patient.first_name }} {{order.patient.last_name}} || {{ order.created_at|date:"F j, Y" }}</p>
       </div>
       <div class="content">
         <p>
