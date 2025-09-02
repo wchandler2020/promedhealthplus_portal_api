@@ -32,6 +32,7 @@
         margin: 0;
         font-size: 28px;
         font-weight: 700;
+        text-align: center;
       }
 
       .content {
@@ -40,8 +41,10 @@
         line-height: 1.5;
       }
 
+      /* This is the key change */
       .content p {
-        margin-bottom: 10px;
+        margin-top: 0;
+        margin-bottom: 5px; /* Adjust this value to control spacing */
       }
 
       .invoice-info {
@@ -104,7 +107,6 @@
         </p>
         <p><strong>Facility Name:</strong> {{ order.facility_name }}</p>
         <p><strong>Facility Address:</strong> {{ order.street }}</p>
-        <br />
         <p>{{order.city}}, {{order.state}} {{order.zip_code}}</p>
 
         <p>
