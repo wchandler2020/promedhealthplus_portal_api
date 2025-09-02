@@ -35,7 +35,7 @@ class CreateOrderView(generics.CreateAPIView):
             'william.dev@promedhealthplus.com'
         ]
         
-        subject = f"Invoice for Order #{order.id}"
+        subject = f"Invoice for Order {order.id} || {order.patient.first_name} {order.patient.last_name} || {order.created_at}"
 
         # Render HTML
         html_content = render_to_string('orders/order_invoice.html', {'order': order})
