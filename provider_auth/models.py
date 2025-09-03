@@ -124,3 +124,11 @@ class EmailVerificationToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.user.email}"
+    
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=30)

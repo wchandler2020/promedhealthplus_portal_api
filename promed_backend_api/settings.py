@@ -249,6 +249,8 @@ AZURE_CONNECTION_STRING=os.getenv('AZURE_CONNECTION_STRING')
 # Always define STATIC_ROOT. It's the local staging folder for collectstatic.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build')
 
+LOCAL_HOST = 'http://localhost:3000'
+
 # Use the new STORAGES dictionary for Django 4.2+
 STORAGES = {
     "default": {
