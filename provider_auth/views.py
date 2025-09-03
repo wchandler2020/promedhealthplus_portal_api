@@ -19,15 +19,13 @@ from twilio.rest import Client
 from django.core.mail import send_mail
 from dotenv import load_dotenv
 from django.template.loader import render_to_string
+from datetime import datetime
 from weasyprint import HTML
 from io import BytesIO
 import random
 import os
 
 load_dotenv()
-# k_phone = os.getenv('KAYVON_PHONE_NUMBER')
-
-# Create your views here.
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = api_serializers.MyTokenObtainPairSerializer
 
@@ -101,10 +99,9 @@ class RegisterUser(generics.CreateAPIView):
             fail_silently=False
         )
 
-
 class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [AllowAny]
-
+    
     def get(self, request, token):
         try:
             verification_token = EmailVerificationToken.objects.get(token=token)
@@ -115,11 +112,24 @@ class VerifyEmailView(generics.GenericAPIView):
             user.is_verified = True
             user.save()
             verification_token.delete()
+            # Send welcome email
+            welcome_html = render_to_string(
+                'provider_auth/welcome_email.html',
+                {'user': user}
+            )
+
+            send_mail(
+                subject='Welcome to ProMed Health Plus!',
+                message='Welcome to ProMed Health Plus! We are excited to have you on board.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=welcome_html,
+                fail_silently=False
+            )
             return Response({"message": "Email successfully verified. You can now log in."}, status=status.HTTP_200_OK)
 
         except EmailVerificationToken.DoesNotExist:
             return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class VerifyCodeView(generics.CreateAPIView):
     serializer_class = api_serializers.VerifyCodeSerializer
@@ -167,16 +177,6 @@ class ProviderProfileView(generics.RetrieveAPIView):
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.conf import settings
-from datetime import datetime
-
-from provider_auth import serializers as api_serializers
-
 
 class ContactRepView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
