@@ -304,7 +304,8 @@ class RequestPasswordResetView(generics.GenericAPIView):
         # Send email password reset if user exists
         if 'user' in locals():
             token = api_models.PasswordResetToken.objects.create(user=user)
-            reset_link = f"{LOCAL_HOST}/reset-password/{token.token}/"
+            # reset_link = f"{LOCAL_HOST}/reset-password/{token.token}/"
+            reset_link = f"{LOCAL_HOST}/#/reset-password/{token.token}/"
 
             html_message = render_to_string('provider_auth/passwordresetemail.html', 
                                             {'reset_link': reset_link,
