@@ -101,4 +101,13 @@ class ContactRepSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
     message = serializers.CharField(required=True)
     
+class ResetPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
 
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError("Passwords do not match.")
+        return data
+class RequestPasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)

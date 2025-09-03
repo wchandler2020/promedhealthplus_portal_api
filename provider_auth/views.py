@@ -13,6 +13,8 @@ from orders.models import Order, OrderItem
 from provider_auth import models as api_models
 from provider_auth import serializers as api_serializers
 from django.template.loader import render_to_string
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.conf import settings
 from decimal import Decimal
 from twilio.rest import Client
@@ -22,6 +24,7 @@ from django.template.loader import render_to_string
 from datetime import datetime
 from weasyprint import HTML
 from io import BytesIO
+from promed_backend_api.settings import LOCAL_HOST, DEFAULT_FROM_EMAIL
 import random
 import os
 
@@ -249,6 +252,75 @@ class ContactRepView(generics.CreateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
+class ResetPasswordView(generics.GenericAPIView):
+    serializer_class = api_serializers.ResetPasswordSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, token):
+        try:
+            reset_token = api_models.PasswordResetToken.objects.get(token=token)
+        except api_models.PasswordResetToken.DoesNotExist:
+            return Response({'error': 'Invalid or expired token.'}, status=400)
+
+        if reset_token.is_expired():
+            reset_token.delete()
+            return Response({'error': 'Token has expired.'}, status=400)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password = serializer.validated_data['password']
+
+        # Validate password strength
+        user = reset_token.user
+        try:
+            validate_password(password, user=user)
+        except DjangoValidationError as e:
+            return Response({'error': e.messages}, status=400)
+
+        user.set_password(password)
+        user.save()
+        reset_token.delete()
+
+        return Response({'success': 'Password has been reset successfully.'}, status=200)
+    
+    
+class RequestPasswordResetView(generics.GenericAPIView):
+    serializer_class = api_serializers.RequestPasswordResetSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        try: 
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            pass
+
+        response_message = {'message': 'If the email is registered, a reset link has been sent.'}
+
+        # Send email password reset if user exists
+        if 'user' in locals():
+            token = api_models.PasswordResetToken.objects.create(user=user)
+            reset_link = f"{LOCAL_HOST}/reset-password/{token.token}/"
+
+            html_message = render_to_string('registration/passwordresetemail.html', 
+                                            {'reset_link': reset_link,
+                                             'user': user,
+                                             'year': datetime.now().year})
+            # Send email with reset link
+            send_mail(
+                subject='Password Reset Request',
+                message=f'Click the link to reset your password: {reset_link}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+
+        return Response(response_message, status=200)
 
 
 
