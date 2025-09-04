@@ -85,7 +85,7 @@ class RegisterUser(generics.CreateAPIView):
         token, created = EmailVerificationToken.objects.get_or_create(user=user)
 
         verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
-
+        
         email_html_message = render_to_string(
             'provider_auth/email_verification.html',
             {
