@@ -7,7 +7,7 @@ from provider_auth import views as api_views
 urlpatterns = [
     path('provider/token/', api_views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('provider/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('provider/register/', api_viewspath('verify-email/<uuid:token>/', api_views.VerifyEmailView.as_view(), name='verify-email'),.RegisterUser.as_view(), name='register'),
+    path('provider/register/', api_views.RegisterUser.as_view(), name='register'),
 #    path('send-code/', api_views.SendVerificationCodeView.as_view(), name='send-code'),
     path('verify-code/', api_views.VerifyCodeView.as_view(), name='verify-code'),
     path('provider/profile/', api_views.ProviderProfileView.as_view(), name='provider-profile'),
