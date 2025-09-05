@@ -126,8 +126,7 @@
                 <th>Product</th>
                 <th>Manufacturer</th>
                 <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
+                <th>Size</th>
               </tr>
             </thead>
             <tbody>
@@ -136,15 +135,12 @@
                 <td>{{ item.product_name }}</td>
                 <td>{{ item.manufacturer }}</td>
                 <td>{{ item.quantity }}</td>
-                <td>${{ item.mft_price|floatformat:2 }}</td>
-                <td>${{ item.total_price|floatformat:2 }}</td>
+                <td>{{ item.variant.size }}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-
-        <p class="total">Total Amount: ${{ order.total_price }}</p>
       </div>
 
       <div class="footer">
