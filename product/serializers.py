@@ -4,7 +4,7 @@ from .models import Product, ProductVariant
 class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
-        fields = ['id', 'size', 'price', 'is_available']
+        fields = ['id', 'size', 'is_available']
 
 class ProductSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)

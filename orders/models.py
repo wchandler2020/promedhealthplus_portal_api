@@ -19,7 +19,6 @@ ORDER_STATUS_CHOICES = (
 class Order(models.Model):
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='orders')
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
     facility_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=20)
     street = models.CharField(max_length=255)
@@ -38,28 +37,11 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, related_name='ordered_items')
-    variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, null=True, related_name='order_items')  
+    variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, null=True, related_name='order_items')
     quantity = models.PositiveIntegerField(default=0)
-    price_at_order = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
     def __str__(self):
         return f'{self.quantity} of {self.product.name if self.product else "Deleted Product"}'
     class Meta:
-        db_table = 'order_items' 
-        
-    @property
-    def total_price(self):
-        return self.price_at_order * self.quantity
+        db_table = 'order_items'
 
-    @property
-    def product_name(self):
-        return self.product.name if self.product else "Deleted Product"
-
-    @property
-    def manufacturer(self):
-        return self.product.manufacturer if self.product and self.product.manufacturer else "Unknown"
-
-
-    @property
-    def mft_price(self):
-        return self.price_at_order
