@@ -31,7 +31,7 @@
       .header p {
         margin-top: 0;
         margin-bottom: 4px;
-        font-size: 16px; 
+        font-size: 16px;
       }
 
       .header h2 {
@@ -97,12 +97,13 @@
         <p>123 Broad Street</p>
         <p>Philadelphia, PA 19107</p>
         <p>(213)555 - 1212</p>
-        <p>Invoice for Order - {{ order.patient.first_name }} {{order.patient.last_name}} || {{ order.created_at|date:"F j, Y" }}</p>
+        <p>
+          Invoice for Order - {{ order.patient.first_name }}
+          {{order.patient.last_name}} || {{ order.created_at|date:"F j, Y" }}
+        </p>
       </div>
       <div class="content">
-        <p>
-          <strong>Provider Name:</strong> {{ order.provider.full_name }}
-        </p>
+        <p><strong>Provider Name:</strong> {{ order.provider.full_name }}</p>
         <p>
           <strong>Provider Email Address:</strong> {{order.provider.email }}
         </p>
@@ -132,8 +133,8 @@
             <tbody>
               {% for item in order.items.all %}
               <tr>
-                <td>{{ item.product_name }}</td>
-                <td>{{ item.manufacturer }}</td>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.product.manufacturer }}</td>
                 <td>{{ item.quantity }}</td>
                 <td>{{ item.variant.size }}</td>
               </tr>
