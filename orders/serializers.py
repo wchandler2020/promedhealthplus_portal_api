@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Order, OrderItem
 from product.models import Product, ProductVariant
 from patients.models import Patient
-from decimal import Decimal
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
@@ -38,7 +38,8 @@ class OrderSerializer(serializers.ModelSerializer):
             )
 
         return order
-# 📖 2. For displaying order history
+
+# ✅ 2. For displaying order history (no pricing)
 class OrderItemDisplaySerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     variant_name = serializers.CharField(source='variant.name', read_only=True)
@@ -49,18 +50,10 @@ class OrderItemDisplaySerializer(serializers.ModelSerializer):
 
 class OrderSummarySerializer(serializers.ModelSerializer):
     items = OrderItemDisplaySerializer(many=True)
-    total = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ['id', 'created_at', 'status', 'items', 'total']
-
-    def get_total(self, obj):
-        total = Decimal(0)
-        for item in obj.items.all():
-            if item.variant:
-                total += item.variant.price * item.quantity
-        return total
+        fields = ['id', 'created_at', 'status', 'items']  # ❌ No 'total' here
 
 class PatientOrderHistorySerializer(serializers.ModelSerializer):
     orders = serializers.SerializerMethodField()
