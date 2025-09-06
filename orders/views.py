@@ -6,6 +6,7 @@ from weasyprint import HTML
 from io import BytesIO
 from django.core.mail import EmailMessage
 import orders.serializers as api_serializers
+import orders.models as api_models
 from rest_framework.response import Response
 
 class CreateOrderView(generics.CreateAPIView):
@@ -51,4 +52,16 @@ class CreateOrderView(generics.CreateAPIView):
             to=recipient_list,
         )
         email.attach(f"invoice_order_{order.id}.pdf", pdf_file.read(), 'application/pdf')
-        email.send(fail_silently=False)
+        email.send(fail_silently=False)\
+            
+class ProviderOrderHistoryView(generics.ListAPIView):
+    serializer_class = api_serializers.PatientOrderHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return  api_models.Patient.objects.filter(orders__provider=self.request.user).distinct()
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
