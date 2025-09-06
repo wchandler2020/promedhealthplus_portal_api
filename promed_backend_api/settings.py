@@ -22,7 +22,8 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['.onrender.com', '127.0.0.1', 'localhost', 'pythonanywhere.com', 'wchandler2025.pythonanywhere.com']
+ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = ['.onrender.com', '127.0.0.1', 'localhost', 'pythonanywhere.com', 'wchandler2025.pythonanywhere.com']
 CSRF_TRUSTED_ORIGINS = [
     "https://promedhealthplus-portal-api-1.onrender.com",
 ]
@@ -95,24 +96,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'promed_backend_api.wsgi.application'
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('NEON_DB_CONN_STRING'),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
-
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('DB_NAME'),
-#         'USER': os.getenv('DB_USER'),
-#         'PASSWORD': os.getenv('DB_PASSWORD'),
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
+#     'default': dj_database_url.config(
+#         default=os.getenv('NEON_DB_CONN_STRING'),
+#         conn_max_age=600,
+#         ssl_require=True
+#     )
 # }
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
