@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Order, OrderItem
 from product.models import Product, ProductVariant
 from patients.models import Patient
+from django.urls import reverse
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -36,24 +37,19 @@ class OrderSerializer(serializers.ModelSerializer):
                 variant=item_data['variant'],
                 quantity=item_data['quantity'],
             )
-
-        return order
-
-# ✅ 2. For displaying order history (no pricing)
-class OrderItemDisplaySerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    variant_name = serializers.CharField(source='variant.name', read_only=True)
-
-    class Meta:
-        model = OrderItem
-        fields = ['id', 'product_name', 'variant_name', 'quantity']
+        return order 
 
 class OrderSummarySerializer(serializers.ModelSerializer):
-    items = OrderItemDisplaySerializer(many=True)
-
+    invoice_url = serializers.SerializerMethodField()
     class Meta:
         model = Order
-        fields = ['id', 'created_at', 'status', 'items']  # ❌ No 'total' here
+        fields = ['id', 'created_at', 'status', 'invoice_url']
+
+    def get_invoice_url(self, obj):
+        request = self.context.get('request')
+        path = reverse('order-invoice-pdf', args=[obj.id])
+        return request.build_absolute_uri(path)
+
 
 class PatientOrderHistorySerializer(serializers.ModelSerializer):
     orders = serializers.SerializerMethodField()
@@ -68,4 +64,5 @@ class PatientOrderHistorySerializer(serializers.ModelSerializer):
         qs = obj.orders.order_by('-created_at')
         if not all_orders:
             qs = qs[:5]
-        return OrderSummarySerializer(qs, many=True).data
+
+        return OrderSummarySerializer(qs, many=True, context=self.context).data

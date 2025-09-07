@@ -1,6 +1,8 @@
 # orders/views.py
 from django.shortcuts import render
 from rest_framework import generics, status, permissions
+from rest_framework.views import APIView
+from django.http import FileResponse, Http404
 from django.conf import settings
 from django.template.loader import render_to_string
 from weasyprint import HTML
@@ -108,3 +110,35 @@ class ProviderOrderHistoryView(generics.ListAPIView):
     def get_serializer_context(self):
         # Pass request context so the serializer can handle ?all=true logic
         return {'request': self.request}
+    
+
+class InvoicePDFView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, order_id):
+        try:
+            order = api_models.Order.objects.get(id=order_id, provider=request.user)
+
+            provider_name = clean_string(order.provider.full_name)
+            patient_name = clean_string(order.patient.first_name + " " + order.patient.last_name)
+            file_name = f"invoice_order_{order.id}.pdf"
+            blob_path = f"orders/{provider_name}/{patient_name}/{file_name}"
+
+            blob_client = blob_service_client.get_blob_client(
+                container=settings.AZURE_CONTAINER,
+                blob=blob_path
+            )
+
+            stream = blob_client.download_blob()
+            return FileResponse(
+                stream.readall(),
+                as_attachment=True,
+                filename=file_name,
+                content_type='application/pdf'
+            )
+
+        except api_models.Order.DoesNotExist:
+            raise Http404("Order not found")
+        except Exception as e:
+            print(f"Error retrieving invoice PDF: {e}")
+            raise Http404("Could not retrieve invoice")
