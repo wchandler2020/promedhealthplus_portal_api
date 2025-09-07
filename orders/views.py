@@ -11,7 +11,7 @@ import orders.models as api_models
 from rest_framework.response import Response
 
 # Import Azure BlobServiceClient and clean_string from your utility
-from promed_backend_api.azure_storage_utility import blob_service_client, clean_string
+from utils.azure_storage import blob_service_client, clean_string
 from django.core.files.base import ContentFile
 
 class CreateOrderView(generics.CreateAPIView):
@@ -91,3 +91,10 @@ class CreateOrderView(generics.CreateAPIView):
         )
         email.attach(f"invoice_order_{order.id}.pdf", pdf_file.read(), 'application/pdf')
         email.send(fail_silently=False)
+        
+class ProviderOrderHistoryView(generics.ListAPIView):
+    serializer_class = api_serializers.OrderSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return api_models.Order.objects.filter(provider=user).order_by('-created_at')
