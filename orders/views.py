@@ -91,10 +91,20 @@ class CreateOrderView(generics.CreateAPIView):
         )
         email.attach(f"invoice_order_{order.id}.pdf", pdf_file.read(), 'application/pdf')
         email.send(fail_silently=False)
-        
+
 class ProviderOrderHistoryView(generics.ListAPIView):
-    serializer_class = api_serializers.OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = api_serializers.PatientOrderHistorySerializer
 
     def get_queryset(self):
-        user = self.request.user
-        return api_models.Order.objects.filter(provider=user).order_by('-created_at')
+        provider = self.request.user
+        return api_models.Patient.objects.filter(
+            orders__provider=provider
+        ).prefetch_related(
+            'orders__items__product',
+            'orders__items__variant'
+        ).distinct()
+
+    def get_serializer_context(self):
+        # Pass request context so the serializer can handle ?all=true logic
+        return {'request': self.request}
