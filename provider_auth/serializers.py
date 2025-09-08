@@ -1,4 +1,3 @@
-#auth_user.serializers
 from .models import User, Profile, COUNTRY_CODE_CHOICES
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -15,7 +14,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['full_name'] = user.full_name
         token['email'] = user.email
         token['username'] = user.username
-        # Add new fields to the token
         token['phone_number'] = str(user.phone_number) if user.phone_number else None
         token['country_code'] = user.country_code
         return token
@@ -32,49 +30,38 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    password2 = serializers.CharField(write_only=True, required=True)
-    # Define a serializer field for the country code choices
-    country_code = serializers.ChoiceField(choices=COUNTRY_CODE_CHOICES, required=False)
+    password2 = serializers.CharField(style={"input_type": "password"}, write_only=True)
+    npi_number = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'phone_number', 'country_code', 'password', 'password2')
-        extra_kwargs = {
-            'phone_number': {'required': False},
-            'country_code': {'required': False},
-        }
+        fields = ["full_name", "email", "phone_number", "password", "password2", "npi_number"]
 
-    def validate(self, attr):
-        if attr['password'] != attr['password2']:
-            raise serializers.ValidationError({'password': 'Passwords must match.'})
-        return attr
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        
+        npi_number = attrs.get('npi_number')
+        if npi_number and len(npi_number) != 10:
+            raise serializers.ValidationError({"npi_number": "NPI number must be 10 digits."})
+            
+        return attrs
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        validated_data.pop('password2')
-
-        # Pop the new fields
-        phone_number = validated_data.pop('phone_number', None)
-        country_code = validated_data.pop('country_code', None)
-
-        if 'username' not in validated_data or not validated_data['username']:
-            validated_data['username'] = validated_data['email'].split('@')[0] if '@' in validated_data['email'] else validated_data['email']
-
-        user = User.objects.create(
-            phone_number=phone_number,
-            country_code=country_code,
-            **validated_data
+        npi_number = validated_data.pop('npi_number', None)
+        
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            full_name=validated_data['full_name'],
+            phone_number=validated_data['phone_number'],
+            password=validated_data['password'],
+            npi_number=npi_number
         )
-        user.set_password(password)
-        user.save()
         return user
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'email', 'full_name', 'username', 'phone_number', 'country_code')
-
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     image = serializers.SerializerMethodField()
