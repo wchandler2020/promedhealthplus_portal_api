@@ -50,6 +50,8 @@ class User(AbstractUser):
 
     otp = models.CharField(max_length=100, null=True, blank=True)
     refresh_token = models.CharField(max_length=1000, null=True, blank=True)
+    npi_number = models.CharField(max_length=10, null=True, blank=True)
+    is_approved = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
     is_verified = models.BooleanField(default=False)

@@ -29,6 +29,24 @@ import random
 import os
 
 load_dotenv()
+# provider_auth/views.py
+
+import uuid
+import random
+import os
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
+from django.core.mail import send_mail
+from twilio.rest import Client
+from dotenv import load_dotenv
+from . import models as api_models
+from . import serializers as api_serializers
+
+load_dotenv()
+
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = api_serializers.MyTokenObtainPairSerializer
 
@@ -36,32 +54,46 @@ class MyTokenObtainPairView(TokenObtainPairView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.user
+
+        if not user.is_verified:
+            return Response(
+                {'detail': 'Your account is not verified. Please check your email to complete the verification.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        if not user.is_approved:
+            return Response(
+                {'detail': 'Your account is pending administrator approval. We will contact you once it is active.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         refresh = RefreshToken.for_user(user)
         access = str(refresh.access_token)
         method = request.data.get('method', 'email')
         code = str(random.randint(100000, 999999))
         session_id = str(uuid.uuid4())
-        twilio_api_key = os.getenv('TWILIO_API_KEY')
-        twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
-        api_models.Verification_Code.objects.create(user=user, code=code, method=method, session_id=session_id)
 
-        # Add a check to see if the user has a phone number
-        if user.phone_number:
-            phone_number = str(user.phone_number)
-            print('Phone number: ', phone_number)
-            if method == 'sms':
-                client = Client(twilio_api_key, twilio_secret_key)
-                client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verifications.create(
-                    to=phone_number,
-                    channel='sms'
-                )
+        api_models.Verification_Code.objects.create(
+            user=user, 
+            code=code, 
+            method=method, 
+            session_id=session_id
+        )
 
-        # Continue with email logic regardless of phone number
+        if user.phone_number and method == 'sms':
+            twilio_api_key = os.getenv('TWILIO_API_KEY')
+            twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
+            client = Client(twilio_api_key, twilio_secret_key)
+            client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verifications.create(
+                to=str(user.phone_number),
+                channel='sms'
+            )
+
         if method == 'email':
             send_mail(
                 subject='Login Verification Code',
-                message=f'Your code is {code}',
-                from_email = settings.DEFAULT_FROM_EMAIL,
+                message=f'Your login verification code is {code}. This code will expire shortly.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email]
             )
 
@@ -74,7 +106,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
             'session_id': session_id,
             'detail': 'Verification code sent.'
         }, status=status.HTTP_200_OK)
-
 
 class RegisterUser(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -107,31 +138,38 @@ class VerifyEmailView(generics.GenericAPIView):
     
     def get(self, request, token):
         try:
-            verification_token = EmailVerificationToken.objects.get(token=token)
+            verification_token = api_models.EmailVerificationToken.objects.get(token=token)
             user = verification_token.user
+
             if user.is_verified:
                 return Response({"message": "Email already verified."}, status=status.HTTP_200_OK)
 
+            # Mark the user's email as verified
             user.is_verified = True
             user.save()
             verification_token.delete()
-            # Send welcome email
-            welcome_html = render_to_string(
-                'provider_auth/welcome_email.html',
+
+            # Send the new 'awaiting approval' email to the user
+            approval_email_html = render_to_string(
+                'provider_auth/awaiting_approval_email.html',
                 {'user': user}
             )
 
             send_mail(
-                subject='Welcome to ProMed Health Plus!',
-                message='Welcome to ProMed Health Plus! We are excited to have you on board.',
+                subject='Your ProMed Health Plus Account is Pending Review',
+                message='Thank you for registering. Your account is currently under review by our administrators.',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
-                html_message=welcome_html,
+                html_message=approval_email_html,
                 fail_silently=False
             )
-            return Response({"message": "Email successfully verified. You can now log in."}, status=status.HTTP_200_OK)
 
-        except EmailVerificationToken.DoesNotExist:
+            return Response(
+                {"message": "Email successfully verified. Your account is now awaiting admin approval."}, 
+                status=status.HTTP_200_OK
+            )
+
+        except api_models.EmailVerificationToken.DoesNotExist:
             return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyCodeView(generics.CreateAPIView):
