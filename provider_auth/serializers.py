@@ -3,6 +3,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import auth
+from django.core.exceptions import ValidationError
 from orders.models import Order, OrderItem
 from product.models import Product
 from decimal import Decimal
@@ -30,9 +31,40 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password2 = serializers.CharField(style={"input_type": "password"}, write_only=True)
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
     npi_number = serializers.CharField(write_only=True, required=False)
 
+    class Meta:
+        model = User
+        fields = ('full_name', 'email', 'phone_number', 'password', 'password2', 'npi_number')
+        extra_kwargs = {
+            'email': {'required': True},
+            'phone_number': {'required': True},
+            'full_name': {'required': True},
+            'npi_number': {'required': True}
+        }
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        return attrs
+
+    def create(self, validated_data):
+        try:
+            data = validated_data.copy()
+            
+            user = User.objects.create_user(
+                username=data['email'],
+                email=data['email'],
+                full_name=data['full_name'],
+                phone_number=data['phone_number'],
+                npi_number=data['npi_number'],
+                password=data['password']
+            )
+            return user
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
     class Meta:
         model = User
         fields = ["full_name", "email", "phone_number", "password", "password2", "npi_number"]
@@ -48,16 +80,19 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        npi_number = validated_data.pop('npi_number', None)
-        
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            full_name=validated_data['full_name'],
-            phone_number=validated_data['phone_number'],
-            password=validated_data['password'],
-            npi_number=npi_number
-        )
-        return user
+        try: 
+            data = validated_data.copy()        
+            user = User.objects.create_user(
+                    username=data['email'], # <--- Add this line
+                    email=data['email'],
+                    full_name=data['full_name'],
+                    phone_number=data['phone_number'],
+                    npi_number=data['npi_number'],
+                    password=data['password']
+            )
+            return user
+        except  as e:
+            
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
