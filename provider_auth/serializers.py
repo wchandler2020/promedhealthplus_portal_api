@@ -1,12 +1,9 @@
-#auth_user.serializers
-from .models import User, Profile, COUNTRY_CODE_CHOICES
+from .models import User, Profile
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.models import auth
-from orders.models import Order, OrderItem
-from product.models import Product
-from decimal import Decimal
+from django.core.exceptions import ValidationError
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -15,14 +12,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['full_name'] = user.full_name
         token['email'] = user.email
         token['username'] = user.username
-        # Add new fields to the token
         token['phone_number'] = str(user.phone_number) if user.phone_number else None
         token['country_code'] = user.country_code
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        user = auth.authenticate(
+        user = authenticate(
             request=self.context.get('request'),
             email=attrs['email'],
             password=attrs['password']
@@ -34,43 +30,48 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
-    # Define a serializer field for the country code choices
-    country_code = serializers.ChoiceField(choices=COUNTRY_CODE_CHOICES, required=False)
+    npi_number = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'phone_number', 'country_code', 'password', 'password2')
+        fields = ('full_name', 'email', 'phone_number', 'password', 'password2', 'npi_number')
         extra_kwargs = {
-            'phone_number': {'required': False},
-            'country_code': {'required': False},
+            'email': {'required': True},
+            'phone_number': {'required': True},
+            'full_name': {'required': True},
+            'npi_number': {'required': True}
         }
 
-    def validate(self, attr):
-        if attr['password'] != attr['password2']:
-            raise serializers.ValidationError({'password': 'Passwords must match.'})
-        return attr
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        
+        npi_number = attrs.get('npi_number')
+        if npi_number and len(npi_number) != 10:
+            raise serializers.ValidationError({"npi_number": "NPI number must be 10 digits."})
+            
+        return attrs
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        validated_data.pop('password2')
+        # Remove password2 from validated data as it is not a model field
+        validated_data.pop('password2', None)
 
-        # Pop the new fields
-        phone_number = validated_data.pop('phone_number', None)
-        country_code = validated_data.pop('country_code', None)
-
-        if 'username' not in validated_data or not validated_data['username']:
-            validated_data['username'] = validated_data['email'].split('@')[0] if '@' in validated_data['email'] else validated_data['email']
-
-        user = User.objects.create(
-            phone_number=phone_number,
-            country_code=country_code,
-            **validated_data
-        )
-        user.set_password(password)
-        user.save()
-        return user
+        try:
+            user = User.objects.create_user(
+                username=validated_data['email'],  # Username same as email
+                email=validated_data['email'],
+                full_name=validated_data['full_name'],
+                phone_number=validated_data['phone_number'],
+                npi_number=validated_data['npi_number'],
+                password=validated_data['password']
+            )
+            return user
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
 
 class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(read_only=True)  # Avoid unintended updates
+    
     class Meta:
         model = User
         fields = ('id', 'email', 'full_name', 'username', 'phone_number', 'country_code')
@@ -109,5 +110,6 @@ class ResetPasswordSerializer(serializers.Serializer):
         if data['password'] != data['confirm_password']:
             raise serializers.ValidationError("Passwords do not match.")
         return data
+
 class RequestPasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)

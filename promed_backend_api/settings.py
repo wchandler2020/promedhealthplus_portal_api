@@ -241,19 +241,15 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'vastyle2010@gmail.com'
 
-# Azure Storage Environment Configs
-# Azure Storage Environment Configs
-
 AZURE_ACCOUNT_NAME=os.getenv('AZURE_ACCOUNT_NAME')
 AZURE_ACCOUNT_KEY=os.getenv('AZURE_ACCOUNT_KEY')
-AZURE_CONNECTION_STRING=os.getenv('AZURE_CONNECTION_STRING')
-
-# Always define STATIC_ROOT. It's the local staging folder for collectstatic.
+\
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build')
+
+AZURE_CONTAINER = 'media'
 
 LOCAL_HOST = 'http://localhost:3000'
 
-# Use the new STORAGES dictionary for Django 4.2+
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.azure_storage.AzureStorage",
