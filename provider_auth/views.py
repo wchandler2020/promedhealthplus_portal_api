@@ -1,52 +1,33 @@
-import random
+import os
 import uuid
-
-from django.shortcuts import render
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import generics, status, permissions
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.response import Response
-from django.core.mail import EmailMultiAlternatives, EmailMessage
-from .models import User, Profile, EmailVerificationToken
-from orders.models import Order, OrderItem
-from provider_auth import models as api_models
-from provider_auth import serializers as api_serializers
-from django.template.loader import render_to_string
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.conf import settings
-from decimal import Decimal
-from twilio.rest import Client
-from django.core.mail import send_mail
-from dotenv import load_dotenv
-from django.template.loader import render_to_string
-from datetime import datetime
-from weasyprint import HTML
+import random
 from io import BytesIO
-from promed_backend_api.settings import LOCAL_HOST, DEFAULT_FROM_EMAIL
-import random
-import os
+from datetime import datetime
 
-load_dotenv()
-# provider_auth/views.py
-
-import uuid
-import random
-import os
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
+from django.contrib.auth.password_validation import validate_password
+from django.template.loader import render_to_string
+from django.utils import timezone
+
+from rest_framework import generics, status, permissions
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+
 from twilio.rest import Client
 from dotenv import load_dotenv
+from weasyprint import HTML
+
+from .models import User, Profile, EmailVerificationToken
 from . import models as api_models
 from . import serializers as api_serializers
 
-load_dotenv()
+from promed_backend_api.settings import LOCAL_HOST, DEFAULT_FROM_EMAIL
 
+load_dotenv()
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = api_serializers.MyTokenObtainPairSerializer
 
@@ -164,6 +145,29 @@ class VerifyEmailView(generics.GenericAPIView):
                 fail_silently=False
             )
 
+            # Notify admin about the newly verified user
+            admin_subject = f"New Provider Awaiting Approval: {user.full_name}"
+            admin_message = render_to_string('provider_auth/new_provider_admin_notification.html', {
+                'user': user,
+                'profile': user.profile,
+                'verification_date': datetime.now()
+            })
+
+            admin_recipients = [
+                'admin@yourdomain.com',
+                'william.d.chandler1@gmail.com',
+                'harold@promedhealthplus.com'
+            ]
+
+            send_mail(
+                subject=admin_subject,
+                message='A new provider has verified their email and is awaiting admin approval.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=admin_recipients,
+                html_message=admin_message,
+                fail_silently=False
+            )
+
             return Response(
                 {"message": "Email successfully verified. Your account is now awaiting admin approval."}, 
                 status=status.HTTP_200_OK
@@ -171,6 +175,7 @@ class VerifyEmailView(generics.GenericAPIView):
 
         except api_models.EmailVerificationToken.DoesNotExist:
             return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class VerifyCodeView(generics.CreateAPIView):
     serializer_class = api_serializers.VerifyCodeSerializer
