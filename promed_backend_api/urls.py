@@ -25,18 +25,15 @@ urlpatterns = [
     path('swagger<format>/', schema_view.with_ui(cache_timeout=0), name='schema-json'),
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-
     # Admin
     path('admin/', admin.site.urls),
-
     # App URLs
     path('api/v1/', include('provider_auth.urls')),
     path('api/v1/', include('notes.urls')),
     path('api/v1/', include('orders.urls')),
     path('api/v1/', include('product.urls')),
     path('api/v1/patient/', include('patients.urls')),
-    path('api/v1/notifications/', include('notifications.urls'))
-
+    path('api/v1/notifications/', include('notifications.urls')),
    # Onboarding Docs
     path('api/v1/onboarding/', include('onboarding_ops.urls')),
     
