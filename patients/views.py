@@ -1,5 +1,3 @@
-from django.shortcuts import render
-
 from rest_framework.permissions import IsAuthenticated
 from patients import serializers as api_serializers
 from rest_framework import generics, status
