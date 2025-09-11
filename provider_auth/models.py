@@ -52,6 +52,7 @@ class User(AbstractUser):
     refresh_token = models.CharField(max_length=1000, null=True, blank=True)
     npi_number = models.CharField(max_length=10, null=True, blank=True)
     is_approved = models.BooleanField(default=False)
+    welcome_email_sent = models.BooleanField(default=False) 
     date_joined = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
     is_verified = models.BooleanField(default=False)

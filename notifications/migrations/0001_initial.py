@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="SalesRep",
+            name="Notification",
             fields=[
                 (
                     "id",
@@ -22,33 +22,19 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
+                ("message", models.TextField()),
                 (
-                    "name",
+                    "type",
                     models.CharField(
-                        blank=True,
-                        max_length=150,
-                        null=True,
-                        verbose_name="Representative Name",
-                    ),
-                ),
-                (
-                    "email",
-                    models.EmailField(
-                        blank=True,
-                        max_length=254,
-                        null=True,
-                        verbose_name="Representative Email Address",
-                    ),
-                ),
-                (
-                    "phone",
-                    models.CharField(
-                        blank=True,
+                        choices=[
+                            ("new_patient", "New Patient"),
+                            ("new_order", "New Order"),
+                            ("announcement", "Announcement"),
+                        ],
                         max_length=20,
-                        null=True,
-                        verbose_name="Representative Phone Number",
                     ),
                 ),
+                ("is_read", models.BooleanField(default=False)),
                 ("date_created", models.DateTimeField(auto_now_add=True)),
                 ("date_updated", models.DateTimeField(auto_now=True)),
             ],
