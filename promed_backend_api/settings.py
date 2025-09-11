@@ -37,7 +37,7 @@ USER_APPS = [
     'order_items.apps.OrderItemsConfig',
     'cart.apps.CartConfig',
     'product.apps.ProductConfig',
-    'notifications.apps.NotificiationsConfig',
+    'notifications.apps.NotificationsConfig',
 ]
 
 THIRD_PARTY_APPS = [
