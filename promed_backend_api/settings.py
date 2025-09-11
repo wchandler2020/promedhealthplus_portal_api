@@ -12,8 +12,8 @@ load_dotenv()
 sentry_sdk.init(
     dsn="https://e8b8032c2344202bda64fc938e4dc5db@o4509803038113792.ingest.us.sentry.io/4509803039031296",
     integrations=[DjangoIntegration()],
-    traces_sample_rate=1.0,  # Set lower in production (e.g., 0.1)
-    send_default_pii=True    # Sends user info if available
+    traces_sample_rate=1.0,  
+    send_default_pii=True    
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +37,7 @@ USER_APPS = [
     'order_items.apps.OrderItemsConfig',
     'cart.apps.CartConfig',
     'product.apps.ProductConfig',
+    'notifications.apps.NotificiationsConfig',
 ]
 
 THIRD_PARTY_APPS = [
@@ -116,12 +117,11 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'core.validators.HIPAAPasswordValidator',  # Your custom validator
+        'NAME': 'core.validators.HIPAAPasswordValidator', 
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
-    # Optional but helpful
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
@@ -227,13 +227,12 @@ JAZZMIN_UI_TWEAKS = {
 }
 
 
-## EMAIL CONFIGURATIONS
 EMAIL_BACKEND = 'anymail.backends.sendgrid.EmailBackend'
 
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 
 EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_HOST_USER = 'apikey' # this is exactly the value 'apikey'
+EMAIL_HOST_USER = 'apikey'
 EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
@@ -241,7 +240,6 @@ DEFAULT_FROM_EMAIL = 'vastyle2010@gmail.com'
 
 AZURE_ACCOUNT_NAME=os.getenv('AZURE_ACCOUNT_NAME')
 AZURE_ACCOUNT_KEY=os.getenv('AZURE_ACCOUNT_KEY')
-\
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build')
 
 AZURE_CONTAINER = 'media'
@@ -267,7 +265,6 @@ STORAGES = {
     },
 }
 
-# The URLs are still needed to correctly serve the files
 AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
 STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/static/'
 MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/media/'
