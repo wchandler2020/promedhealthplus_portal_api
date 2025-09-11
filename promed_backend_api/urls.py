@@ -32,8 +32,8 @@ urlpatterns = [
     path('api/v1/', include('notes.urls')),
     path('api/v1/', include('orders.urls')),
     path('api/v1/', include('product.urls')),
+    path('api/v1/', include('notifications.urls')),
     path('api/v1/patient/', include('patients.urls')),
-    path('api/v1/notifications/', include('notifications.urls')),
    # Onboarding Docs
     path('api/v1/onboarding/', include('onboarding_ops.urls')),
     

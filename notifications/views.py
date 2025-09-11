@@ -35,3 +35,12 @@ class UnreadNotificationCountView(APIView):
     def get(self, request):
         count = api_models.Notification.objects.filter(recipient=request.user, is_read=False).count()
         return Response({'unread_count': count})
+    
+class NotificationDeleteView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = api_models.Notification.objects.all()
+
+    def perform_destroy(self, instance):
+        if instance.recipient != self.request.user:
+            raise PermissionDenied("You do not have permission to delete this notification.")
+        instance.delete()
