@@ -9,6 +9,7 @@ import dj_database_url
 
 load_dotenv()
 
+
 sentry_sdk.init(
     dsn="https://e8b8032c2344202bda64fc938e4dc5db@o4509803038113792.ingest.us.sentry.io/4509803039031296",
     integrations=[DjangoIntegration()],
@@ -96,24 +97,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'promed_backend_api.wsgi.application'
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('NEON_DB_CONN_STRING'),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
-
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('DB_NAME'),
-#         'USER': os.getenv('DB_USER'),
-#         'PASSWORD': os.getenv('DB_PASSWORD'),
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
+#     'default': dj_database_url.config(
+#         default=os.getenv('NEON_DB_CONN_STRING'),
+#         conn_max_age=600,
+#         ssl_require=True
+#     )
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
