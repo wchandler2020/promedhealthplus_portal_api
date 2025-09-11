@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import permissions, generics, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 import notifications.serializers as api_serializers
@@ -28,7 +29,7 @@ class MarkNotificationReadView(generics.UpdateAPIView):
         notification.save()
         return Response({'status': 'marked as read'}, status=status.HTTP_200_OK)
     
-class UnreadNotificationCountView(generics.APIView):
+class UnreadNotificationCountView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
