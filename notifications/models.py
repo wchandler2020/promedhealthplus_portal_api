@@ -18,7 +18,7 @@ class Notification(models.Model):
     message = models.TextField()
     type = models.CharField(max_length=20, choices=NOTIFICATION_TYPE_CHOICES)
     is_read = models.BooleanField(default=False)
-    data = models.JSONField(blank=True, null=True)
+    data = models.TextField(blank=True, null=True)
     broadcast = models.BooleanField(default=False)
     expires_at = models.DateTimeField(null=True, blank=True) 
     date_created = models.DateTimeField(auto_now_add=True)
