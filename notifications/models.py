@@ -20,6 +20,7 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     data = models.JSONField(blank=True, null=True)
     broadcast = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(null=True, blank=True) 
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
 
