@@ -207,22 +207,22 @@ class VerifyCodeView(generics.CreateAPIView):
         request.session['mfa'] = True  # Mark session as verified
         return Response({'verified': True}, status=status.HTTP_200_OK)
 
-class ProviderProfileView(generics.RetrieveAPIView):
+class ProviderProfileView(generics.RetrieveAPIView, generics.UpdateAPIView): # Add generics.UpdateAPIView
     serializer_class = api_serializers.ProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user.profile
 
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
     def put(self, request, *args, **kwargs):
-        profile = self.get_object()
-        serializer = self.serializer_class(profile, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return self.update(request, *args, **kwargs)
+        
+    def patch(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
 class ContactRepView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
