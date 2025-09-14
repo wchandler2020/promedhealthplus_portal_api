@@ -2,9 +2,6 @@ from rest_framework.permissions import IsAuthenticated
 from patients import serializers as api_serializers
 from rest_framework import generics, status
 from .models import Patient
-
-
-# Create your views here.
 class PatientListView(generics.ListCreateAPIView):
     serializer_class = api_serializers.PatientSerializer
     permission_classes = [IsAuthenticated]

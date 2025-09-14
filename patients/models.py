@@ -24,10 +24,9 @@ class Patient(models.Model):
     medical_record_number = models.CharField(max_length=255, null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
+    # Adding new models from what we had before? 
     ivrStatus = models.CharField(max_length=50, choices=ivr_status_choices, null=True, blank=True)
-    wound_size_length = models.PositiveIntegerField(null=True, blank=True)
-    wound_size_width = models.PositiveIntegerField(null=True, blank=True)
-
+    
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()

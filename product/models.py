@@ -3,7 +3,6 @@ class Product(models.Model):
     name = models.CharField(max_length=255, unique=True)
     manufacturer = models.CharField(max_length=155, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    max_size = models.PositiveIntegerField(default=0)
     image = models.ImageField(
         upload_to='product_images/', 
         null=True, 
