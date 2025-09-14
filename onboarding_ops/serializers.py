@@ -19,19 +19,33 @@ class ProviderFormSerializer(serializers.ModelSerializer):
         model = api_models.ProviderForm
         fields = '__all__'
         read_only_fields = ['user']
+        
+# class ProviderDocumentSerializer(serializers.ModelSerializer):
+#     # This is a read-only field that will display the URL of the uploaded file
+#     file = serializers.FileField(use_url=True)
+
+#     class Meta:
+#         model = api_models.ProviderDocument
+#         # `file` is now included directly in the fields
+#         fields = ['id', 'document_type', 'file', 'uploaded_at']
+#         read_only_fields = ['user', 'uploaded_at']
+    
+#     def create(self, validated_data):
+#         user = self.context['request'].user
+#         return api_models.ProviderDocument.objects.create(user=user, **validated_data)
 class ProviderDocumentSerializer(serializers.ModelSerializer):
     # This is a read-only field that will display the URL of the uploaded file
     file = serializers.FileField(use_url=True)
 
     class Meta:
         model = api_models.ProviderDocument
-        # `file` is now included directly in the fields
         fields = ['id', 'document_type', 'file', 'uploaded_at']
         read_only_fields = ['user', 'uploaded_at']
     
     def create(self, validated_data):
-        user = self.context['request'].user
-        return api_models.ProviderDocument.objects.create(user=user, **validated_data)
+        # The user will be passed to this method from the view.
+        # No need to get it again from the context or the request.
+        return api_models.ProviderDocument.objects.create(**validated_data)
     
 class ProviderFormFillSerializer(serializers.Serializer):
     patient_id = serializers.IntegerField(write_only=True)
