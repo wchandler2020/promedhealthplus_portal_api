@@ -20,15 +20,18 @@ class ProviderFormSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['user']
 class ProviderDocumentSerializer(serializers.ModelSerializer):
-    file_url = serializers.SerializerMethodField()
+    # This is a read-only field that will display the URL of the uploaded file
+    file = serializers.FileField(use_url=True)
+
     class Meta:
         model = api_models.ProviderDocument
-        fields = ['id', 'document_type', 'file', 'file_url', 'uploaded_at']
-        read_only_fields = ['user']
-
-    def get_file_url(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.file.url) if obj.file else None
+        # `file` is now included directly in the fields
+        fields = ['id', 'document_type', 'file', 'uploaded_at']
+        read_only_fields = ['user', 'uploaded_at']
+    
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return api_models.ProviderDocument.objects.create(user=user, **validated_data)
     
 class ProviderFormFillSerializer(serializers.Serializer):
     patient_id = serializers.IntegerField(write_only=True)
