@@ -102,6 +102,16 @@ class ContactRepSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
     message = serializers.CharField(required=True)
     
+class PublicContactSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    facility = serializers.CharField(max_length=255)
+    city = serializers.CharField(max_length=100)
+    state = serializers.CharField(max_length=2)
+    zip = serializers.CharField(max_length=10)
+    phone = serializers.CharField(max_length=20)
+    email = serializers.EmailField()
+    question = serializers.CharField()
+    
 class ResetPasswordSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
