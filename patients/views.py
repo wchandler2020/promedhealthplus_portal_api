@@ -13,3 +13,10 @@ class PatientListView(generics.ListCreateAPIView):
     # Set the provider to the authenticated user
     def perform_create(self, serializer):
         serializer.save(provider=self.request.user)
+        
+class PatientDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = api_serializers.PatientSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Patient.objects.filter(provider=self.request.user)
