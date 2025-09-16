@@ -22,6 +22,8 @@ class Patient(models.Model):
     tertiary_insurance = models.CharField(max_length=255, null=True, blank=True)
     tertiary_insurance_number = models.CharField(max_length=255, null=True, blank=True)
     medical_record_number = models.CharField(max_length=255, null=True, blank=True)
+    wound_size_length = models.PositiveIntegerField()
+    wound_size_width = models.PositiveIntegerField()
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
     # Adding new models from what we had before? 
