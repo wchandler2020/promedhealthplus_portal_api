@@ -1,32 +1,31 @@
-# sales_rep/views.py
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from provider_auth.models import Profile, User
 from patients.models import Patient
-from patients.serializers import PatientSerializer  # Make sure this exists!
+from patients.serializers import PatientSerializer
 
 class SalesRepDashboardView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PatientSerializer  # Set your serializer here
+    serializer_class = PatientSerializer
 
     def get_queryset(self):
-        user = self.request.user
-
-        # Only allow sales reps
+        user = self.request.user # The user object is available here
+        
+        # Check the role directly from the user object
         if user.role != 'sales_rep':
             return Patient.objects.none()
-
+        
+        # If the user is a sales rep, filter the data accordingly
         try:
-            profile = user.profile
-        except Profile.DoesNotExist:
+            sales_rep_profile = user.profile
+            sales_rep = sales_rep_profile.sales_rep
+        except (Profile.DoesNotExist, AttributeError):
             return Patient.objects.none()
 
-        sales_rep = profile.sales_rep
         if not sales_rep:
             return Patient.objects.none()
 
-        # Get providers linked to this sales rep
-        provider_user_ids = sales_rep.providers.values_list('user__id', flat=True)
-
-        # Return patients whose provider is one of those users
+        provider_profiles = Profile.objects.filter(sales_rep=sales_rep)
+        provider_user_ids = [profile.user.id for profile in provider_profiles]
+        
         return Patient.objects.filter(provider__id__in=provider_user_ids)
