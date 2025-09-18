@@ -32,4 +32,6 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
+    
+admin.site.register(Profile)
 
