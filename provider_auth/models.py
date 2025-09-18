@@ -117,8 +117,6 @@ class Verification_Code(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
-
-#Email Verification
 class EmailVerificationToken(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
@@ -135,27 +133,18 @@ class PasswordResetToken(models.Model):
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=30)
 
-# ----------------- Signal Handlers -----------------
-
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
 
 def post_save_profile(sender, instance, **kwargs):
-    # This signal handler might cause infinite loops if you're not careful.
-    # It's better to update the profile from the user save method or use a different approach.
     pass
 
 # New signal handler to send the verification email
 def send_email_verification_on_create(sender, instance, created, **kwargs):
+    # This condition will then pass:
     if created and not instance.is_verified:
-        # Prevent this signal from running when a user is created by the superuser
-        # or when the user is created via a different method.
-        # This is important to avoid sending multiple emails.
-        # The is_verified check is a safety measure.
         token, _ = EmailVerificationToken.objects.get_or_create(user=instance)
-        
-        # Determine the correct verification link based on your hosting environment
         verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
         
         email_html_message = render_to_string(

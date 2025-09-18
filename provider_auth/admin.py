@@ -1,7 +1,10 @@
 # provider_auth/admin.py
 from django.contrib import admin
-from .models import User, Profile
+from .models import User, Profile, EmailVerificationToken
+from django.template.loader import render_to_string
+from django.conf import settings
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.core.mail import send_mail
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -36,5 +39,28 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
+    
+    def save_model(self, request, obj, form, change):
+        is_new = obj.pk is None
+        super().save_model(request, obj, form, change)
+
+        if is_new and not obj.is_verified:
+            # Send verification email
+            token, _ = EmailVerificationToken.objects.get_or_create(user=obj)
+            verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
+
+            html_message = render_to_string('provider_auth/email_verification.html', {
+                'user': obj,
+                'verification_link': verification_link
+            })
+
+            send_mail(
+                subject='Verify Your Email Address',
+                message=f"Click the link to verify your email: {verification_link}",
+                html_message=html_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[obj.email],
+                fail_silently=False
+            )
     
 admin.site.register(Profile)
