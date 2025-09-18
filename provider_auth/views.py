@@ -1,3 +1,4 @@
+# provider_auth/views.py
 import os
 import uuid
 import random
@@ -118,6 +119,10 @@ class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     
     def get(self, request, token):
+        # ⬅️ FIX: Add this line to prevent the drf_yasg error during schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Response(status=status.HTTP_200_OK)
+            
         try:
             verification_token = api_models.EmailVerificationToken.objects.get(token=token)
             user = verification_token.user
@@ -413,6 +418,3 @@ class PublicContactView(generics.CreateAPIView):
                 {'error': 'Failed to send message.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-
