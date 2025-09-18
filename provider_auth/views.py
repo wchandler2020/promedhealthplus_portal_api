@@ -96,7 +96,8 @@ class RegisterUser(generics.CreateAPIView):
         user = serializer.save()
         token, created = EmailVerificationToken.objects.get_or_create(user=user)
 
-        verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
+        # verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
+        verification_link = f"{LOCAL_HOST}/#/verify-email/{token.token}"
         
         email_html_message = render_to_string(
             'provider_auth/email_verification.html',
@@ -156,6 +157,7 @@ class VerifyEmailView(generics.GenericAPIView):
             admin_recipients = [
                 'admin@yourdomain.com',
                 'william.d.chandler1@gmail.com',
+                'kayvoncrenshaw@gmail.com'
                 'harold@promedhealthplus.com'
             ]
 

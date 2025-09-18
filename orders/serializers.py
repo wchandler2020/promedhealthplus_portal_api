@@ -56,7 +56,7 @@ class PatientOrderHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Patient
-        fields = ['id', 'first_name', 'last_name', 'orders']
+        fields = ['id', 'first_name', 'last_name', 'orders', 'activate_Account']
 
     def get_orders(self, obj):
         request = self.context.get('request')
