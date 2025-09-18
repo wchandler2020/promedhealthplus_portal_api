@@ -71,11 +71,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(e.messages)
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(read_only=True)  # Avoid unintended updates
-    
+    username = serializers.CharField(read_only=True)
+    role = serializers.CharField(read_only=True)  # ADD THIS LINE
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'username', 'phone_number', 'country_code')
+        fields = (
+            'id', 'email', 'full_name', 'username', 'phone_number', 'country_code','role',
+        )
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
