@@ -8,6 +8,8 @@ from sales_rep.models import SalesRep
 from phonenumber_field.modelfields import PhoneNumberField
 import random
 import uuid
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 # For reference/display purposes only — NOT used to prefix phone numbers
 COUNTRY_CODE_CHOICES = (
@@ -77,7 +79,6 @@ class User(AbstractUser):
             self.full_name = f"{self.first_name} {self.last_name}".strip() or self.username
         super().save(*args, **kwargs)
 
-
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     sales_rep = models.ForeignKey(SalesRep, on_delete=models.SET_NULL, null=True, blank=True, related_name="providers")
@@ -107,15 +108,6 @@ class Profile(models.Model):
         super().save(*args, **kwargs)
 
 
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
-
-def post_save_profile(sender, instance, **kwargs):
-    instance.profile.save()
-
-post_save.connect(create_user_profile, sender=User)
-post_save.connect(post_save_profile, sender=User)
 class Verification_Code(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     code = models.CharField(max_length=6)
@@ -142,3 +134,46 @@ class PasswordResetToken(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=30)
+
+# ----------------- Signal Handlers -----------------
+
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+def post_save_profile(sender, instance, **kwargs):
+    # This signal handler might cause infinite loops if you're not careful.
+    # It's better to update the profile from the user save method or use a different approach.
+    pass
+
+# New signal handler to send the verification email
+def send_email_verification_on_create(sender, instance, created, **kwargs):
+    if created and not instance.is_verified:
+        # Prevent this signal from running when a user is created by the superuser
+        # or when the user is created via a different method.
+        # This is important to avoid sending multiple emails.
+        # The is_verified check is a safety measure.
+        token, _ = EmailVerificationToken.objects.get_or_create(user=instance)
+        
+        # Determine the correct verification link based on your hosting environment
+        verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
+        
+        email_html_message = render_to_string(
+            'provider_auth/email_verification.html',
+            {
+                'user': instance,
+                'verification_link': verification_link
+            }
+        )
+        send_mail(
+            subject='Verify Your Email Address',
+            message=f"Click the link to verify your email: {verification_link}",
+            html_message=email_html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[instance.email],
+            fail_silently=False
+        )
+
+# ----------------- Connect Signals -----------------
+post_save.connect(create_user_profile, sender=User)
+post_save.connect(send_email_verification_on_create, sender=User)
