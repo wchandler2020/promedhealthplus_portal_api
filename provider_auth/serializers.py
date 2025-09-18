@@ -14,6 +14,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['phone_number'] = str(user.phone_number) if user.phone_number else None
         token['country_code'] = user.country_code
+        token['role'] = user.role
         return token
 
     def validate(self, attrs):

@@ -32,6 +32,13 @@ ROLES = (
     ('Medical Supply Technician', 'Medical Supply Technician'),
 )
 
+USER_ROLES = (
+    ('provider', 'Medical Provider'),
+    ('sales_rep', 'Sales Representative'),
+    ('admin', 'Administrator'),
+    ('ceo', 'CEO'),
+)
+
 def generate_code():
     return str(random.randint(100000, 999999))
 
@@ -47,7 +54,7 @@ class User(AbstractUser):
         default='+1',
         help_text="Country dial code for reference (e.g. +1 for US)."
     )
-
+    role = models.CharField(max_length=50, choices=USER_ROLES, default='provider')
     otp = models.CharField(max_length=100, null=True, blank=True)
     refresh_token = models.CharField(max_length=1000, null=True, blank=True)
     npi_number = models.CharField(max_length=10, null=True, blank=True)
