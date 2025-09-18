@@ -35,8 +35,9 @@ class MyTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.user
 
+        user = serializer.user
+        
         if not user.is_verified:
             return Response(
                 {'detail': 'Your account is not verified. Please check your email to complete the verification.'},
@@ -49,8 +50,9 @@ class MyTokenObtainPairView(TokenObtainPairView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        refresh = RefreshToken.for_user(user)
-        access = str(refresh.access_token)
+        refresh = serializer.validated_data['refresh']
+        access = serializer.validated_data['access']
+
         method = request.data.get('method', 'email')
         code = str(random.randint(100000, 999999))
         session_id = str(uuid.uuid4())
@@ -63,6 +65,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
         )
 
         if user.phone_number and method == 'sms':
+            # ... (Twilio code is the same)
             twilio_api_key = os.getenv('TWILIO_API_KEY')
             twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
             client = Client(twilio_api_key, twilio_secret_key)
