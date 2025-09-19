@@ -1,31 +1,28 @@
-from rest_framework import generics, permissions, status
+# In your sales_rep/views.py file
+
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from provider_auth.models import Profile, User
-from patients.models import Patient
-from patients.serializers import PatientSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
 
-class SalesRepDashboardView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PatientSerializer
+from sales_rep.models import SalesRep
+from .serializers import SalesRepDashboardSerializer  # <-- Import the correct serializer
 
-    def get_queryset(self):
-        user = self.request.user # The user object is available here
-        
-        # Check the role directly from the user object
-        if user.role != 'sales_rep':
-            return Patient.objects.none()
-        
-        # If the user is a sales rep, filter the data accordingly
+class SalesRepDashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
         try:
-            sales_rep_profile = user.profile
-            sales_rep = sales_rep_profile.sales_rep
-        except (Profile.DoesNotExist, AttributeError):
-            return Patient.objects.none()
+            # Assumes a OneToOne relationship or a custom manager
+            # to get the SalesRep instance for the current user.
+            sales_rep = request.user.salesrep_profile
+        except SalesRep.DoesNotExist:
+            return Response(
+                {"error": "You are not associated with a SalesRep profile."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-        if not sales_rep:
-            return Patient.objects.none()
+        # Use the single, top-level serializer to handle all the nesting.
+        serializer = SalesRepDashboardSerializer(sales_rep)
 
-        provider_profiles = Profile.objects.filter(sales_rep=sales_rep)
-        provider_user_ids = [profile.user.id for profile in provider_profiles]
-        
-        return Patient.objects.filter(provider__id__in=provider_user_ids)
+        return Response(serializer.data, status=status.HTTP_200_OK)
