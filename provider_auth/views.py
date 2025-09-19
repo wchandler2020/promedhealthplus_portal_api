@@ -72,7 +72,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
         code = str(random.randint(100000, 999999))
         session_id = str(uuid.uuid4())
 
-        Verification_Code.objects.create(
+        api_models.Verification_Code.objects.create(
             user=user,
             code=code,
             method=method,
