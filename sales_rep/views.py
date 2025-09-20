@@ -1,5 +1,3 @@
-# In your sales_rep/views.py file
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -13,16 +11,12 @@ class SalesRepDashboardView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            # Assumes a OneToOne relationship or a custom manager
-            # to get the SalesRep instance for the current user.
-            sales_rep = request.user.salesrep_profile
+            sales_rep = request.user.salesrep_profile  # ensure this is the SalesRep object
         except SalesRep.DoesNotExist:
             return Response(
                 {"error": "You are not associated with a SalesRep profile."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Use the single, top-level serializer to handle all the nesting.
         serializer = SalesRepDashboardSerializer(sales_rep)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
