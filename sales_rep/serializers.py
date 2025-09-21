@@ -26,7 +26,6 @@ class ProviderDashboardSerializer(serializers.ModelSerializer):
     
     def get_patients(self, obj):
         try:
-            # CORRECTED: Get the User instance from the Profile object
             user_instance = obj.user
             patients_queryset = user_instance.patients.all()
             return PatientSerializer(patients_queryset, many=True).data
