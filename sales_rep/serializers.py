@@ -75,7 +75,9 @@ class SalesRepDashboardSerializer(serializers.ModelSerializer):
                 # Count IVRs from ivrStatus list
                 ivrs = patient.ivrStatus or []
                 provider_ivrs += len(ivrs)
-                provider_approved_ivrs += sum(1 for ivr in ivrs if ivr.get('status') == 'Approved')
+                # provider_approved_ivrs += sum(1 for ivr in ivrs if ivr.get('status') == 'Approved')
+                provider_approved_ivrs += sum(1 for ivr in ivrs if ivr == 'Approved')
+
 
             # Append provider-level stats
             provider_stats.append({
