@@ -47,60 +47,58 @@ class SalesRepDashboardSerializer(serializers.ModelSerializer):
         model = SalesRep
         fields = ['id', 'name', 'providers', 'stats']
 
-    def get_stats(self, obj):
-        provider_stats = []
-        total_orders = 0
-        total_delivered = 0
-        total_ivrs = 0
-        total_approved_ivrs = 0
+   def get_stats(self, obj):
+    provider_stats = []
+    total_orders = 0
+    total_delivered = 0
+    total_ivrs = 0
+    total_approved_ivrs = 0
 
-        for provider in obj.providers.all():
-            try:
-                user = provider.user
-                patients = user.patients.all()
-            except User.DoesNotExist:
-                patients = []
+    for provider in obj.providers.all():
+        try:
+            user = provider.user
+            patients = user.patients.all()
+        except User.DoesNotExist:
+            patients = []
 
-            provider_orders = 0
-            provider_delivered = 0
-            provider_ivrs = 0
-            provider_approved_ivrs = 0
+        provider_orders = 0
+        provider_delivered = 0
+        provider_ivrs = 0
+        provider_approved_ivrs = 0
 
-            for patient in patients:
-                # Count orders
-                orders = patient.orders.all()
-                provider_orders += orders.count()
-                provider_delivered += orders.filter(status='Delivered').count()
+        for patient in patients:
+            # Count orders
+            orders = patient.orders.all()
+            provider_orders += orders.count()
+            provider_delivered += orders.filter(status='Delivered').count()
 
-                # Count IVRs from ivrStatus list
-                ivrs = patient.ivrStatus or []
-                provider_ivrs += len(ivrs)
-                # provider_approved_ivrs += sum(1 for ivr in ivrs if ivr.get('status') == 'Approved')
-                provider_approved_ivrs += sum(1 for ivr in ivrs if ivr == 'Approved')
+            # Count IVRs (only one per patient for now)
+            if patient.ivrStatus:
+                provider_ivrs += 1
+                if patient.ivrStatus == 'Approved':
+                    provider_approved_ivrs += 1
 
+        provider_stats.append({
+            'provider_id': provider.id,
+            'provider_name': provider.full_name,
+            'total_orders': provider_orders,
+            'delivered_orders': provider_delivered,
+            'total_ivrs': provider_ivrs,
+            'approved_ivrs': provider_approved_ivrs,
+        })
 
-            # Append provider-level stats
-            provider_stats.append({
-                'provider_id': provider.id,
-                'provider_name': provider.full_name,
-                'total_orders': provider_orders,
-                'delivered_orders': provider_delivered,
-                'total_ivrs': provider_ivrs,
-                'approved_ivrs': provider_approved_ivrs,
-            })
+        total_orders += provider_orders
+        total_delivered += provider_delivered
+        total_ivrs += provider_ivrs
+        total_approved_ivrs += provider_approved_ivrs
 
-            # Add to global totals
-            total_orders += provider_orders
-            total_delivered += provider_delivered
-            total_ivrs += provider_ivrs
-            total_approved_ivrs += provider_approved_ivrs
+    return {
+        'summary': {
+            'totalOrders': total_orders,
+            'deliveredOrders': total_delivered,
+            'totalIVRs': total_ivrs,
+            'approvedIVRs': total_approved_ivrs,
+        },
+        'by_provider': provider_stats,
+    }
 
-        return {
-            'summary': {
-                'totalOrders': total_orders,
-                'deliveredOrders': total_delivered,
-                'totalIVRs': total_ivrs,
-                'approvedIVRs': total_approved_ivrs,
-            },
-            'by_provider': provider_stats,
-        }
