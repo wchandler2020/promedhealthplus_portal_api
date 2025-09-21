@@ -1,7 +1,44 @@
-from collections import defaultdict
-from orders.models import Order
+from rest_framework import serializers
+from provider_auth.models import Profile, User
 from patients.models import Patient
+from orders.models import Order
+from sales_rep.models import SalesRep
 
+
+# Order serializer
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['id', 'status', 'created_at']
+
+
+# Patient serializer with ivrStatus and orders
+class PatientSerializer(serializers.ModelSerializer):
+    orders = OrderSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Patient
+        fields = ['id', 'full_name', 'ivrStatus', 'orders']
+
+
+# Provider serializer with patients list
+class ProviderDashboardSerializer(serializers.ModelSerializer):
+    patients = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = ['id', 'full_name', 'patients']
+
+    def get_patients(self, obj):
+        try:
+            user = obj.user
+            patients = user.patients.all()
+            return PatientSerializer(patients, many=True).data
+        except User.DoesNotExist:
+            return []
+
+
+# Main Dashboard Serializer
 class SalesRepDashboardSerializer(serializers.ModelSerializer):
     providers = ProviderDashboardSerializer(many=True, read_only=True)
     stats = serializers.SerializerMethodField()
@@ -12,28 +49,56 @@ class SalesRepDashboardSerializer(serializers.ModelSerializer):
 
     def get_stats(self, obj):
         provider_stats = []
+        total_orders = 0
+        total_delivered = 0
+        total_ivrs = 0
+        total_approved_ivrs = 0
+
         for provider in obj.providers.all():
-            user = provider.user  # assuming `Profile` is linked to `User`
-            patients = user.patients.all()
-            total_orders = delivered_orders = total_ivrs = approved_ivrs = 0
+            try:
+                user = provider.user
+                patients = user.patients.all()
+            except User.DoesNotExist:
+                patients = []
+
+            provider_orders = 0
+            provider_delivered = 0
+            provider_ivrs = 0
+            provider_approved_ivrs = 0
 
             for patient in patients:
+                # Count orders
                 orders = patient.orders.all()
-                total_orders += orders.count()
-                delivered_orders += orders.filter(status="Delivered").count()
+                provider_orders += orders.count()
+                provider_delivered += orders.filter(status='Delivered').count()
 
-                total_ivrs += len(patient.ivrStatus)
-                approved_ivrs += sum(1 for ivr in patient.ivrStatus if ivr.get("status") == "Approved")
+                # Count IVRs from ivrStatus list
+                ivrs = patient.ivrStatus or []
+                provider_ivrs += len(ivrs)
+                provider_approved_ivrs += sum(1 for ivr in ivrs if ivr.get('status') == 'Approved')
 
+            # Append provider-level stats
             provider_stats.append({
-                "provider_id": provider.id,
-                "provider_name": provider.full_name,
-                "total_orders": total_orders,
-                "delivered_orders": delivered_orders,
-                "total_ivrs": total_ivrs,
-                "approved_ivrs": approved_ivrs,
+                'provider_id': provider.id,
+                'provider_name': provider.full_name,
+                'total_orders': provider_orders,
+                'delivered_orders': provider_delivered,
+                'total_ivrs': provider_ivrs,
+                'approved_ivrs': provider_approved_ivrs,
             })
 
+            # Add to global totals
+            total_orders += provider_orders
+            total_delivered += provider_delivered
+            total_ivrs += provider_ivrs
+            total_approved_ivrs += provider_approved_ivrs
+
         return {
-            "by_provider": provider_stats
+            'summary': {
+                'totalOrders': total_orders,
+                'deliveredOrders': total_delivered,
+                'totalIVRs': total_ivrs,
+                'approvedIVRs': total_approved_ivrs,
+            },
+            'by_provider': provider_stats,
         }
