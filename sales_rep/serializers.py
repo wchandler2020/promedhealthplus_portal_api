@@ -1,36 +1,6 @@
-from rest_framework import serializers
-from provider_auth.models import Profile, User
-from patients.models import Patient
+from collections import defaultdict
 from orders.models import Order
-from .models import SalesRep
-from django.db.models import Count
-
-class OrderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = ['id', 'status', 'created_at']
-
-class PatientSerializer(serializers.ModelSerializer):
-    orders = OrderSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Patient
-        fields = ['id', 'full_name', 'ivrStatus', 'orders']
-
-class ProviderDashboardSerializer(serializers.ModelSerializer):
-    patients = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Profile
-        fields = ['id', 'full_name', 'patients']
-    
-    def get_patients(self, obj):
-        try:
-            user_instance = obj.user
-            patients_queryset = user_instance.patients.all()
-            return PatientSerializer(patients_queryset, many=True).data
-        except User.DoesNotExist:
-            return []
+from patients.models import Patient
 
 class SalesRepDashboardSerializer(serializers.ModelSerializer):
     providers = ProviderDashboardSerializer(many=True, read_only=True)
@@ -41,33 +11,29 @@ class SalesRepDashboardSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'providers', 'stats']
 
     def get_stats(self, obj):
-        all_patients = Patient.objects.filter(provider__sales_reps=obj)
-        all_orders = Order.objects.filter(patient__in=all_patients)
-
-        stats = {
-            'totalOrders': all_orders.count(),
-            'deliveredOrders': all_orders.filter(status='Delivered').count(),
-            'totalIVRs': all_patients.count(),
-            'approvedIVRs': all_patients.filter(ivrStatus='Approved').count(),
-        }
-
-        orders_data = {}
-        ivrs_data = {}
-
+        provider_stats = []
         for provider in obj.providers.all():
-            provider_patients = all_patients.filter(provider=provider)
-            provider_orders = all_orders.filter(patient__in=provider_patients)
+            user = provider.user  # assuming `Profile` is linked to `User`
+            patients = user.patients.all()
+            total_orders = delivered_orders = total_ivrs = approved_ivrs = 0
 
-            orders_data[provider.full_name] = {
-                'total': provider_orders.count(),
-                'delivered': provider_orders.filter(status='Delivered').count()
-            }
-            ivrs_data[provider.full_name] = {
-                'total': provider_patients.count(),
-                'approved': provider_patients.filter(ivrStatus='Approved').count()
-            }
+            for patient in patients:
+                orders = patient.orders.all()
+                total_orders += orders.count()
+                delivered_orders += orders.filter(status="Delivered").count()
 
-        stats['orders_data'] = orders_data
-        stats['ivrs_data'] = ivrs_data
-        
-        return stats
+                total_ivrs += len(patient.ivrStatus)
+                approved_ivrs += sum(1 for ivr in patient.ivrStatus if ivr.get("status") == "Approved")
+
+            provider_stats.append({
+                "provider_id": provider.id,
+                "provider_name": provider.full_name,
+                "total_orders": total_orders,
+                "delivered_orders": delivered_orders,
+                "total_ivrs": total_ivrs,
+                "approved_ivrs": approved_ivrs,
+            })
+
+        return {
+            "by_provider": provider_stats
+        }
