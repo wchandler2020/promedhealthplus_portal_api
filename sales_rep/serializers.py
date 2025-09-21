@@ -3,7 +3,7 @@ from provider_auth.models import Profile, User
 from patients.models import Patient
 from orders.models import Order
 from .models import SalesRep
-from django.db.models import Count # Import Count for aggregation
+from django.db.models import Count
 
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,8 +26,9 @@ class ProviderDashboardSerializer(serializers.ModelSerializer):
     
     def get_patients(self, obj):
         try:
-            user = User.objects.get(profile=obj)
-            patients_queryset = user.patients.all()
+            # CORRECTED: Get the User instance from the Profile object
+            user_instance = obj.user
+            patients_queryset = user_instance.patients.all()
             return PatientSerializer(patients_queryset, many=True).data
         except User.DoesNotExist:
             return []
@@ -47,11 +48,10 @@ class SalesRepDashboardSerializer(serializers.ModelSerializer):
         stats = {
             'totalOrders': all_orders.count(),
             'deliveredOrders': all_orders.filter(status='Delivered').count(),
-            'totalIVRs': all_patients.count(), # Total IVRs is total patients
+            'totalIVRs': all_patients.count(),
             'approvedIVRs': all_patients.filter(ivrStatus='Approved').count(),
         }
 
-        # Per-provider stats for charts
         orders_data = {}
         ivrs_data = {}
 
