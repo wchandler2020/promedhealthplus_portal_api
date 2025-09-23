@@ -9,8 +9,6 @@ from django.utils.text import slugify
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
-
-
 import requests
 import os
 import logging
@@ -31,19 +29,15 @@ from utils.azure_storage import upload_to_azure_stream
 
 logger = logging.getLogger(__name__)
 
-# Permissions
 class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.user == request.user
-
-# CRUD Views for ProviderForm (kept as-is for management)
 class ProviderFormListCreate(generics.ListCreateAPIView):
     serializer_class = ProviderFormSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return ProviderForm.objects.filter(user=self.request.user)
-
 class ProviderFormDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProviderFormSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
@@ -51,14 +45,10 @@ class ProviderFormDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return ProviderForm.objects.filter(user=self.request.user)
 
-# --- JOTFORM WEBHOOK ---
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def jotform_webhook(request):
-    """
-    Handles Jotform webhook submissions. Downloads the PDF and saves it to Azure.
-    """
     serializer = JotFormWebhookSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -80,12 +70,10 @@ def jotform_webhook(request):
         return Response({"error": "Provider not found."}, status=status.HTTP_404_NOT_FOUND)
 
     try:
-        # Download the PDF from Jotform
         pdf_url = form_data.get('submissionPDF', f"https://www.jotform.com/pdf-submission/{submission_id}")
         response = requests.get(pdf_url)
         response.raise_for_status()
 
-        # Generate a clean, structured filename
         file_name = f"{slugify(form_name)}-{submission_id}.pdf"
         
         # Define the Azure blob path
@@ -108,7 +96,6 @@ def jotform_webhook(request):
             }
         )
         if not created:
-            # If the form already exists, update the path and data
             form.completed_form_path = blob_path
             form.form_data = form_data
             form.completed = True
@@ -122,9 +109,6 @@ def jotform_webhook(request):
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
         return Response({"error": f"Internal server error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
 class DocumentUploadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -132,14 +116,15 @@ class DocumentUploadView(APIView):
         serializer = DocumentUploadSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        
         doc_type = serializer.validated_data['document_type']
-        uploaded_files = serializer.validated_data['files'] # This is now a list
-        recipient_email = serializer.validated_data['recipient_email']
+        uploaded_files = serializer.validated_data['files']
         user = request.user
-
+        
+        # Hardcoded physician email address
+        physician_email = "doctor@example.com" # <--- Replace with the actual email
+        
         try:
-            # Create a single email to send all files
             subject = f"New Documents from {user.full_name}"
             body = render_to_string('email/document_upload.html', {
                 'user': user,
@@ -150,7 +135,7 @@ class DocumentUploadView(APIView):
                 subject,
                 body,
                 settings.DEFAULT_FROM_EMAIL,
-                [recipient_email],
+                [physician_email], # <--- Using the hardcoded email
             )
             
             # Loop through the uploaded files and attach each one
@@ -159,30 +144,19 @@ class DocumentUploadView(APIView):
             
             email.send()
 
-            # Create a single record for the batch of documents
-            # or create one for each document if you need to track them individually
-            # Option 1: Create a single record
             ProviderDocument.objects.create(
                 user=user,
                 document_type=doc_type,
             )
-            
-            # Option 2: Create a record for each file
-            # for uploaded_file in uploaded_files:
-            #     ProviderDocument.objects.create(
-            #         user=user,
-            #         document_type=doc_type,
-            #         # Maybe add a filename field to the model to track what was sent
-            #     )
-
             return Response({"success": "Documents uploaded and emailed successfully."}, status=status.HTTP_200_OK)
         
         except Exception as e:
             logger.error(f"Document upload/email failed: {e}", exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class CheckBlobExistsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
+    
     def get(self, request, container_name, blob_name, *args, **kwargs):
         try:
             blob_service_client = BlobServiceClient.from_connection_string(settings.AZURE_STORAGE_CONNECTION_STRING)
@@ -200,17 +174,10 @@ class ProviderDocumentListCreate(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        Ensures a user can only see their own uploaded documents.
-        """
         return ProviderDocument.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        """
-        Associates the document with the authenticated user.
-        """
         serializer.save(user=self.request.user)
-# --- URL and Path Views (kept for existing functionality) ---
 class ProviderDocumentDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProviderDocumentSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
@@ -221,8 +188,6 @@ class ProviderDocumentDetail(generics.RetrieveUpdateDestroyAPIView):
         """
         return ProviderDocument.objects.filter(user=self.request.user)
 class GenerateSASURLView(APIView):
-    # ... (Keep this view as it was, it's a good utility for getting a temporary URL)
     pass
 class ServePDFFromAzure(APIView):
-    # ... (Keep this view, it's used to serve the PDFs stored in Azure)
     pass
