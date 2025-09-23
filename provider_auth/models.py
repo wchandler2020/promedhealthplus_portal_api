@@ -27,12 +27,12 @@ verification_methods = (
     ('sms', 'SMS'),
 )
 
-ROLES = (
-    ('Primary Care Provider', 'Primary Care Provider'),
-    ('Nurse', 'Nurse'),
-    ('Administrator', 'Administrator'),
-    ('Medical Supply Technician', 'Medical Supply Technician'),
-)
+# ROLES = (
+#     ('Primary Care Provider', 'Primary Care Provider'),
+#     ('Nurse', 'Nurse'),
+#     ('Administrator', 'Administrator'),
+#     ('Medical Supply Technician', 'Medical Supply Technician'),
+# )
 
 USER_ROLES = (
     ('provider', 'Medical Provider'),
@@ -49,13 +49,18 @@ class User(AbstractUser):
     username = models.CharField(unique=True, max_length=255)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, null=True, blank=True)
-    phone_number = PhoneNumberField(null=True, blank=True)
     country_code = models.CharField(
         max_length=5,
         choices=COUNTRY_CODE_CHOICES,
         default='+1',
         help_text="Country dial code for reference (e.g. +1 for US)."
     )
+    phone_number = PhoneNumberField(null=True, blank=True) 
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    facility = models.CharField(max_length=200, null=True, blank=True)
+    facility_phone_number = models.CharField(max_length=20, null=True, blank=True)
     role = models.CharField(max_length=50, choices=USER_ROLES, default='provider')
     otp = models.CharField(max_length=100, null=True, blank=True)
     refresh_token = models.CharField(max_length=1000, null=True, blank=True)
@@ -88,9 +93,7 @@ class Profile(models.Model):
     null=True,
     blank=True
     )
-    role = models.CharField(max_length=200, choices=ROLES, null=True, blank=True)
-    facility = models.CharField(max_length=200, null=True, blank=True)
-    facility_phone_number = models.CharField(max_length=20, null=True, blank=True)
+    
     full_name = models.CharField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     country = models.CharField(max_length=255, null=True, blank=True)
