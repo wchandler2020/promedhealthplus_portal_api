@@ -180,7 +180,46 @@ class DocumentUploadView(APIView):
         except Exception as e:
             logger.error(f"Document upload/email failed: {e}", exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class CheckBlobExistsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, container_name, blob_name, *args, **kwargs):
+        try:
+            blob_service_client = BlobServiceClient.from_connection_string(settings.AZURE_STORAGE_CONNECTION_STRING)
+            container_client = blob_service_client.get_container_client(container_name)
+            blob_client = container_client.get_blob_client(blob_name)
+            
+            if blob_client.exists():
+                return Response({'exists': True}, status=status.HTTP_200_OK)
+            else:
+                return Response({'exists': False}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class ProviderDocumentListCreate(generics.ListCreateAPIView):
+    serializer_class = ProviderDocumentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Ensures a user can only see their own uploaded documents.
+        """
+        return ProviderDocument.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        """
+        Associates the document with the authenticated user.
+        """
+        serializer.save(user=self.request.user)
 # --- URL and Path Views (kept for existing functionality) ---
+class ProviderDocumentDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ProviderDocumentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        """
+        Ensures a user can only access their own documents.
+        """
+        return ProviderDocument.objects.filter(user=self.request.user)
 class GenerateSASURLView(APIView):
     # ... (Keep this view as it was, it's a good utility for getting a temporary URL)
     pass
