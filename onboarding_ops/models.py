@@ -29,7 +29,7 @@ class ProviderForm(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.SET_NULL, null=True, blank=True)
     form_type = models.CharField(max_length=100, help_text="e.g., 'New Account Form', 'IVR Report'")
     submission_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
-    completed_form = models.FileField(upload_to=provider_form_upload_path)
+    completed_form = models.FileField(upload_to=provider_form_upload_path, null=True, blank=True)
     form_data = models.JSONField(null=True, blank=True, help_text="A snapshot of the form's data.")
     date_created = models.DateTimeField(auto_now_add=True)
 
