@@ -1,3 +1,4 @@
+# provider_auth/views.py
 import os
 import uuid
 import random
@@ -28,40 +29,57 @@ from . import serializers as api_serializers
 from promed_backend_api.settings import LOCAL_HOST, DEFAULT_FROM_EMAIL
 
 load_dotenv()
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.mail import send_mail
+from .models import Verification_Code
+from .serializers import MyTokenObtainPairSerializer, UserSerializer
+import os, random, uuid
+from twilio.rest import Client
+from django.conf import settings
+
 class MyTokenObtainPairView(TokenObtainPairView):
-    serializer_class = api_serializers.MyTokenObtainPairSerializer
+    serializer_class = MyTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         user = serializer.user
 
+        # Check if user is verified
         if not user.is_verified:
             return Response(
                 {'detail': 'Your account is not verified. Please check your email to complete the verification.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
-        
+
+        # Check if user is approved
         if not user.is_approved:
             return Response(
                 {'detail': 'Your account is pending administrator approval. We will contact you once it is active.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        refresh = RefreshToken.for_user(user)
-        access = str(refresh.access_token)
+        # Generate tokens
+        refresh = serializer.validated_data['refresh']
+        access = serializer.validated_data['access']
+
+        # MFA code setup
         method = request.data.get('method', 'email')
         code = str(random.randint(100000, 999999))
         session_id = str(uuid.uuid4())
 
         api_models.Verification_Code.objects.create(
-            user=user, 
-            code=code, 
-            method=method, 
+            user=user,
+            code=code,
+            method=method,
             session_id=session_id
         )
 
-        if user.phone_number and method == 'sms':
+        if method == 'sms' and user.phone_number:
             twilio_api_key = os.getenv('TWILIO_API_KEY')
             twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
             client = Client(twilio_api_key, twilio_secret_key)
@@ -80,14 +98,16 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
         request.session['mfa'] = False
 
+        user_data = UserSerializer(user).data
+
         return Response({
             'access': str(access),
             'refresh': str(refresh),
             'mfa_required': True,
             'session_id': session_id,
+            'user': user_data,
             'detail': 'Verification code sent.'
         }, status=status.HTTP_200_OK)
-
 class RegisterUser(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [AllowAny]
@@ -119,6 +139,10 @@ class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     
     def get(self, request, token):
+        # ⬅️ FIX: Add this line to prevent the drf_yasg error during schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Response(status=status.HTTP_200_OK)
+            
         try:
             verification_token = api_models.EmailVerificationToken.objects.get(token=token)
             user = verification_token.user
@@ -415,6 +439,3 @@ class PublicContactView(generics.CreateAPIView):
                 {'error': 'Failed to send message.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-

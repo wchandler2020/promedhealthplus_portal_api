@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
+#Auth Serializers
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -14,6 +15,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['phone_number'] = str(user.phone_number) if user.phone_number else None
         token['country_code'] = user.country_code
+        token['role'] = user.role
         return token
 
     def validate(self, attrs):
@@ -30,11 +32,22 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
+    # New fields to match the updated User model
+    country_code = serializers.CharField(required=True)
+    city = serializers.CharField(required=False)
+    state = serializers.CharField(required=False)
+    country = serializers.CharField(required=False)
+    facility = serializers.CharField(required=False)
+    facility_phone_number = serializers.CharField(required=False)
     npi_number = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('full_name', 'email', 'phone_number', 'password', 'password2', 'npi_number')
+        fields = (
+            'full_name', 'email', 'phone_number', 'password', 'password2', 
+            'npi_number', 'country_code', 'city', 'state', 'country', 
+            'facility', 'facility_phone_number'
+        )
         extra_kwargs = {
             'email': {'required': True},
             'phone_number': {'required': True},
@@ -55,26 +68,44 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Remove password2 from validated data as it is not a model field
         validated_data.pop('password2', None)
+        
+        # Manually extract fields that are not part of the create_user method
+        npi_number = validated_data.pop('npi_number', None)
+        country_code = validated_data.pop('country_code', None)
+        city = validated_data.pop('city', None)
+        state = validated_data.pop('state', None)
+        country = validated_data.pop('country', None)
+        facility = validated_data.pop('facility', None)
+        facility_phone_number = validated_data.pop('facility_phone_number', None)
 
         try:
             user = User.objects.create_user(
-                username=validated_data['email'],  # Username same as email
+                username=validated_data['email'],
                 email=validated_data['email'],
                 full_name=validated_data['full_name'],
                 phone_number=validated_data['phone_number'],
-                npi_number=validated_data['npi_number'],
-                password=validated_data['password']
+                npi_number=npi_number,
+                password=validated_data['password'],
+                country_code=country_code,
+                city=city,
+                state=state,
+                country=country,
+                facility=facility,
+                facility_phone_number=facility_phone_number,
             )
             return user
         except ValidationError as e:
             raise serializers.ValidationError(e.messages)
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(read_only=True)  # Avoid unintended updates
-    
+    username = serializers.CharField(read_only=True)
+    role = serializers.CharField(read_only=True)  # ADD THIS LINE
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'username', 'phone_number', 'country_code')
+        fields = (
+            'id', 'email', 'full_name', 'username', 'phone_number', 'country_code','role',
+        )
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
