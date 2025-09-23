@@ -27,13 +27,7 @@ verification_methods = (
     ('sms', 'SMS'),
 )
 
-# ROLES = (
-#     ('Primary Care Provider', 'Primary Care Provider'),
-#     ('Nurse', 'Nurse'),
-#     ('Administrator', 'Administrator'),
-#     ('Medical Supply Technician', 'Medical Supply Technician'),
-# )
-
+##Correct Roles
 USER_ROLES = (
     ('provider', 'Medical Provider'),
     ('sales_rep', 'Sales Representative'),
