@@ -9,10 +9,11 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from .pdf_utils import fill_pdf, fetch_pdf_template_from_azure, TEMPLATE_BLOB_NAMES
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
+from django.core.files.base import ContentFile
 from django.utils.text import slugify
 
 from patients.models import Patient
-from .models import ProviderForm
+from .models import ProviderForm, provider_form_upload_path, provider_document_upload_path
 from utils.azure_storage import generate_sas_url
 from azure.storage.blob import BlobServiceClient
 from django.conf import settings
@@ -362,47 +363,64 @@ def jotform_webhook(request):
         submission_id = data.get('submissionID')
         
         if not provider_email or not submission_id:
-            return Response({"error": "Missing provider email or submission ID."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Missing provider email or submission ID."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Look up the provider
         from provider_auth.models import User
         try:
             provider = User.objects.get(email=provider_email)
         except User.DoesNotExist:
-            return Response({"error": f"Provider with email {provider_email} not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": f"Provider with email {provider_email} not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         # Download the JotForm PDF
         pdf_url = form_data.get('submissionPDF', f"https://www.jotform.com/pdf-submission/{submission_id}")
         response = requests.get(pdf_url)
 
         if response.status_code != 200:
-            return Response({"error": f"Failed to download PDF from {pdf_url}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": f"Failed to download PDF from {pdf_url}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         # Use the slugified form name for a clean filename
         filename = f"{slugify(form_name)}_{submission_id}.pdf"
         file_content = ContentFile(response.content)
 
-        # Check for existing form to avoid duplicates
+        # Atomically create or update the form instance and save the file.
         try:
+            # Look for an existing form based on provider and submission_id
             form_instance = ProviderForm.objects.get(user=provider, submission_id=submission_id)
-            form_instance.completed = True
+            form_instance.form_data = form_data
         except ProviderForm.DoesNotExist:
-            form_instance = ProviderForm.objects.create(
+            # If the form doesn't exist, create it.
+            form_instance = ProviderForm(
                 user=provider,
                 form_type=form_name,
-                completed=True,
                 submission_id=submission_id,
-                # Note: Do not save the file here. We will save it in the next step.
+                form_data=form_data,
             )
-        
-        # Save the file to the model instance's FileField.
-        # The `provider_upload_path` function in the model will handle the path.
+
+        # Set `completed=True` and save the file in a single block.
+        # This ensures the instance is saved with the file and completion status.
         form_instance.completed_form.save(filename, file_content)
-
-        # The rest of the form_instance data is already saved.
+        form_instance.completed = True
         form_instance.save()
-
-        return Response({"success": True, "message": "Form processed successfully.", "file_url": form_instance.completed_form.url}, status=status.HTTP_200_OK)
+        
+        return Response(
+            {
+                "success": True, 
+                "message": "Form processed successfully.", 
+                "file_url": form_instance.completed_form.url,
+                "submission_id": form_instance.submission_id
+            },
+            status=status.HTTP_200_OK
+        )
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
