@@ -3,6 +3,7 @@ from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
 
 ivr_status_choices = (("Pending", "Pending"), ("Approved", "Approved"), ("Denied", "Denied"))
+account_activation_choices = (("Activated", "Activated"), ("Deactivated", "Deactivated"))
 class Patient(models.Model):
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='patients')
     first_name = models.CharField(max_length=255)
@@ -28,7 +29,8 @@ class Patient(models.Model):
     date_updated = models.DateTimeField(auto_now=True)
     # Adding new models from what we had before? 
     ivrStatus = models.CharField(max_length=50, choices=ivr_status_choices, null=True, blank=True)
-    
+    activate_Account = models.CharField(max_length=50, choices=account_activation_choices, null=True, blank=True, default="Activated")
+
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()

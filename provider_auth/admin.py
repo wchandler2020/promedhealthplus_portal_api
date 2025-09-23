@@ -2,6 +2,14 @@ from django.contrib import admin
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+<<<<<<< HEAD
+
+class ProfileInLine(admin.StackedInline):
+    model = Profile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+    fk_name = 'user'
+=======
 from django.core.mail import send_mail
 from django import forms
 from django.utils.translation import gettext_lazy as _
@@ -34,11 +42,16 @@ class AdminUserCreationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+>>>>>>> 2e8b3e5db2c0bcf2605c9941963ff258c5cf2265
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+<<<<<<< HEAD
+    inlines = (ProfileInLine,)
+=======
     add_form = AdminUserCreationForm
+>>>>>>> 2e8b3e5db2c0bcf2605c9941963ff258c5cf2265
     list_display = (
         'email', 
         'full_name', 
@@ -71,6 +84,13 @@ class UserAdmin(BaseUserAdmin):
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
+<<<<<<< HEAD
+    def get_inline_instances(self, request, obj=None):
+        if not obj:
+            return []
+        return super().get_inline_instances(request, obj)
+
+=======
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
@@ -112,3 +132,4 @@ class UserAdmin(BaseUserAdmin):
             )
 
 admin.site.register(Profile)
+>>>>>>> 2e8b3e5db2c0bcf2605c9941963ff258c5cf2265
