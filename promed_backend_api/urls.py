@@ -33,8 +33,8 @@ urlpatterns = [
     path('api/v1/', include('orders.urls')),
     path('api/v1/', include('product.urls')),
     path('api/v1/', include('notifications.urls')),
+    path('api/v1/', include('sales_rep.urls')),
     path('api/v1/patient/', include('patients.urls')),
-   # Onboarding Docs
     path('api/v1/onboarding/', include('onboarding_ops.urls')),
     
 ]
