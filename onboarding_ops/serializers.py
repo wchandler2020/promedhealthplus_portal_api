@@ -5,7 +5,7 @@ from django.conf import settings
 import uuid, os
 from django.core.files.base import File
 from patients.models import Patient
-from .models import ProviderForm, provider_upload_path
+from .models import ProviderForm, provider_form_upload_path
 from io import BytesIO
 from datetime import datetime
 from azure.storage.blob import BlobServiceClient
