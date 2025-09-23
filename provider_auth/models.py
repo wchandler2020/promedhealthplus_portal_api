@@ -11,7 +11,6 @@ import uuid
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-# For reference/display purposes only — NOT used to prefix phone numbers
 COUNTRY_CODE_CHOICES = (
     ('+1', 'United States'),
     ('+1', 'Canada'),
@@ -27,7 +26,6 @@ verification_methods = (
     ('sms', 'SMS'),
 )
 
-##Correct Roles
 USER_ROLES = (
     ('provider', 'Medical Provider'),
     ('sales_rep', 'Sales Representative'),
