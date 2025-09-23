@@ -7,6 +7,9 @@ from rest_framework.views import APIView
 from django.http import FileResponse, HttpResponseNotFound, StreamingHttpResponse
 from django.views.decorators.clickjacking import xframe_options_exempt
 from .pdf_utils import fill_pdf, fetch_pdf_template_from_azure, TEMPLATE_BLOB_NAMES
+from rest_framework.decorators import api_view, permission_classes
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.text import slugify
 
 from patients.models import Patient
 from .models import ProviderForm
@@ -95,8 +98,6 @@ class UploadFilledPDF(generics.CreateAPIView):
             return api_models.ProviderForm.objects.none()
         return api_models.ProviderForm.objects.filter(user=self.request.user)
 
-
-# Context injector for serializer
 class FillPreexistingPDF(generics.CreateAPIView):
     serializer_class = api_serializers.ProviderFormFillSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -346,5 +347,66 @@ class CheckBlobExistsView(APIView):
             return Response({"exists": exists}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([])  # Public endpoint for JotForm webhook
+def jotform_webhook(request):
+    try:
+        data = request.data
+        form_data = data.get('content', {})
+
+        # Use a hidden field in your JotForm to get the provider's email
+        provider_email = form_data.get('contactEmail')
+        form_name = data.get('formTitle', 'jotform_submission')
+        submission_id = data.get('submissionID')
+        
+        if not provider_email or not submission_id:
+            return Response({"error": "Missing provider email or submission ID."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Look up the provider
+        from provider_auth.models import User
+        try:
+            provider = User.objects.get(email=provider_email)
+        except User.DoesNotExist:
+            return Response({"error": f"Provider with email {provider_email} not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Download the JotForm PDF
+        pdf_url = form_data.get('submissionPDF', f"https://www.jotform.com/pdf-submission/{submission_id}")
+        response = requests.get(pdf_url)
+
+        if response.status_code != 200:
+            return Response({"error": f"Failed to download PDF from {pdf_url}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Use the slugified form name for a clean filename
+        filename = f"{slugify(form_name)}_{submission_id}.pdf"
+        file_content = ContentFile(response.content)
+
+        # Check for existing form to avoid duplicates
+        try:
+            form_instance = ProviderForm.objects.get(user=provider, submission_id=submission_id)
+            form_instance.completed = True
+        except ProviderForm.DoesNotExist:
+            form_instance = ProviderForm.objects.create(
+                user=provider,
+                form_type=form_name,
+                completed=True,
+                submission_id=submission_id,
+                # Note: Do not save the file here. We will save it in the next step.
+            )
+        
+        # Save the file to the model instance's FileField.
+        # The `provider_upload_path` function in the model will handle the path.
+        form_instance.completed_form.save(filename, file_content)
+
+        # The rest of the form_instance data is already saved.
+        form_instance.save()
+
+        return Response({"success": True, "message": "Form processed successfully.", "file_url": form_instance.completed_form.url}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 
