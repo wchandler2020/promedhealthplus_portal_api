@@ -1,14 +1,13 @@
 from rest_framework import generics, permissions, status
-from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
-from django.core.files.base import ContentFile
 from django.utils.text import slugify
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+from django.shortcuts import get_object_or_404
 import requests
 import os
 import logging
@@ -187,7 +186,61 @@ class ProviderDocumentDetail(generics.RetrieveUpdateDestroyAPIView):
         Ensures a user can only access their own documents.
         """
         return ProviderDocument.objects.filter(user=self.request.user)
-class GenerateSASURLView(APIView):
-    pass
 class ServePDFFromAzure(APIView):
     pass
+
+class GenerateSASURLView(APIView):
+    """
+    Generates a SAS URL for a blob path.
+    This replaces the previous logic that checked for container/blob names
+    by simplifying the access to look up a completed form by Patient ID/Form Type.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        patient_id = request.query_params.get('patient_id')
+        form_type = request.query_params.get('form_type') # e.g., 'IVR_FORM'
+
+        if not patient_id or not form_type:
+            return Response({"error": "Missing patient_id or form_type query parameter."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Find the most recent completed ProviderForm for this patient/type
+        try:
+            patient = get_object_or_404(Patient, pk=patient_id)
+            latest_form = ProviderForm.objects.filter(
+                user=request.user,
+                patient=patient,
+                form_type__iexact=form_type,
+                completed=True
+            ).order_by('-date_created').first()
+            
+            if not latest_form or not latest_form.completed_form_path:
+                # If no form is found, return a specific error/status
+                return Response({
+                    "error": "No completed JotForm submission found for this patient.",
+                    "completed_form_path": None, # Signal to the frontend no existing form exists
+                    "patient_id": patient_id
+                }, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logger.error(f"Error fetching ProviderForm: {e}")
+            return Response({"error": "Database lookup failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 2. Generate the SAS URL using the stored path
+        try:
+            # The completed_form_path should be the full Azure blob name (e.g., 'media/provider-name/...')
+            sas_url = generate_sas_url(
+                blob_name=latest_form.completed_form_path,
+                container_name=settings.AZURE_CONTAINER, # Assuming 'media' container
+                permission='r'
+            )
+            
+            return Response({
+                "sas_url": sas_url,
+                "completed_form_path": latest_form.completed_form_path,
+                "form_data": latest_form.form_data # Optionally return data for review
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Failed to generate SAS URL for blob {latest_form.completed_form_path}: {e}")
+            return Response({"error": "Failed to generate secure file link."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

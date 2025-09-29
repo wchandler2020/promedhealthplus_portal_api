@@ -20,7 +20,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from twilio.rest import Client
 from dotenv import load_dotenv
-from weasyprint import HTML
 
 from .models import User, Profile, EmailVerificationToken
 from . import models as api_models
@@ -80,10 +79,13 @@ class MyTokenObtainPairView(TokenObtainPairView):
         )
 
         if method == 'sms' and user.phone_number:
-            twilio_api_key = os.getenv('TWILIO_API_KEY')
-            twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
-            client = Client(twilio_api_key, twilio_secret_key)
-            client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verifications.create(
+            account_sid = os.getenv('ACCOUNT_SID')
+            auth_token = os.getenv('AUTH_TOKEN')
+            verify_service_sid = os.getenv('VERIFY_SERVICE_SID')
+
+            client = Client(account_sid, auth_token)
+
+            client.verify.v2.services(verify_service_sid).verifications.create(
                 to=str(user.phone_number),
                 channel='sms'
             )
@@ -139,7 +141,6 @@ class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     
     def get(self, request, token):
-        # ⬅️ FIX: Add this line to prevent the drf_yasg error during schema generation
         if getattr(self, 'swagger_fake_view', False):
             return Response(status=status.HTTP_200_OK)
             
@@ -149,12 +150,10 @@ class VerifyEmailView(generics.GenericAPIView):
 
             if user.is_verified:
                 return Response({"message": "Email already verified."}, status=status.HTTP_200_OK)
-
-            # Mark the user's email as verified
+            
             user.is_verified = True
             user.save()
             verification_token.delete()
-
             # Send the new 'awaiting approval' email to the user
             approval_email_html = render_to_string(
                 'provider_auth/awaiting_approval_email.html',
@@ -212,8 +211,9 @@ class VerifyCodeView(generics.CreateAPIView):
         user = request.user
         session_id = request.data.get('session_id')
         code = request.data.get('code')
-        twilio_api_key = os.getenv('TWILIO_API_KEY')
-        twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
+        account_sid = os.getenv('ACCOUNT_SID')
+        auth_token = os.getenv('AUTH_TOKEN')
+        verify_service_sid = os.getenv('VERIFY_SERVICE_SID')
         if not user or not session_id or not code:
             return Response({'error': 'Missing data'}, status=status.HTTP_400_BAD_REQUEST)
         # Check code
@@ -224,8 +224,8 @@ class VerifyCodeView(generics.CreateAPIView):
             return Response({'verified': False, 'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
         # Mark user as verified
         phone_number = str(user.phone_number)
-        client = Client(twilio_api_key, twilio_secret_key)
-        verification_check = client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verification_checks.create(
+        client = Client(account_sid, auth_token)
+        verification_check = client.verify.v2.services(verify_service_sid).verification_checks.create(
         to=phone_number,
         code=code)
         if not verification_check.valid:
