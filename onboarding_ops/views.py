@@ -54,10 +54,10 @@ def jotform_webhook(request):
 
     data = serializer.validated_data
     form_data = data.get('content', {})
-    provider_email = form_data.get('q4_providerEmail')  # Adjust to your Jotform field name
+    provider_email = form_data.get('q4_providerEmail')
     form_name = data.get('formTitle', 'Jotform Submission')
     submission_id = data.get('submissionID')
-    
+
     if not provider_email or not submission_id:
         logger.error("Jotform webhook missing required data.")
         return Response({"error": "Missing provider email or submission ID."}, status=status.HTTP_400_BAD_REQUEST)
@@ -74,24 +74,24 @@ def jotform_webhook(request):
         response.raise_for_status()
 
         file_name = f"{slugify(form_name)}-{submission_id}.pdf"
-        
+
         # Define the Azure blob path
         provider_slug = slugify(provider.full_name or 'unknown-provider')
         blob_path = f"media/{provider_slug}/onboard_documents/{file_name}"
-        
+
         # Upload the file stream directly to Azure Blob Storage
         with BytesIO(response.content) as stream:
             upload_to_azure_stream(stream, blob_path, settings.AZURE_CONTAINER)
-        
-        # Create a database record
+
+        # Create a database record - FIXED FIELD NAMES
         form, created = ProviderForm.objects.get_or_create(
             user=provider,
             submission_id=submission_id,
             defaults={
                 'form_type': form_name,
-                'completed_form_path': blob_path,
+                'completed_form_path': blob_path,  # Changed from completed_form
                 'form_data': form_data,
-                'completed': True,
+                'completed': True,  # Set completed to True
             }
         )
         if not created:
@@ -108,6 +108,7 @@ def jotform_webhook(request):
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
         return Response({"error": f"Internal server error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class DocumentUploadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -115,14 +116,14 @@ class DocumentUploadView(APIView):
         serializer = DocumentUploadSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         doc_type = serializer.validated_data['document_type']
         uploaded_files = serializer.validated_data['files']
         user = request.user
-        
+
         # Hardcoded physician email address
         physician_email = "doctor@example.com" # <--- Replace with the actual email
-        
+
         try:
             subject = f"New Documents from {user.full_name}"
             body = render_to_string('email/document_upload.html', {
@@ -136,11 +137,11 @@ class DocumentUploadView(APIView):
                 settings.DEFAULT_FROM_EMAIL,
                 [physician_email], # <--- Using the hardcoded email
             )
-            
+
             # Loop through the uploaded files and attach each one
             for uploaded_file in uploaded_files:
                 email.attach(uploaded_file.name, uploaded_file.read(), uploaded_file.content_type)
-            
+
             email.send()
 
             ProviderDocument.objects.create(
@@ -148,20 +149,20 @@ class DocumentUploadView(APIView):
                 document_type=doc_type,
             )
             return Response({"success": "Documents uploaded and emailed successfully."}, status=status.HTTP_200_OK)
-        
+
         except Exception as e:
             logger.error(f"Document upload/email failed: {e}", exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class CheckBlobExistsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get(self, request, container_name, blob_name, *args, **kwargs):
         try:
             blob_service_client = BlobServiceClient.from_connection_string(settings.AZURE_STORAGE_CONNECTION_STRING)
             container_client = blob_service_client.get_container_client(container_name)
             blob_client = container_client.get_blob_client(blob_name)
-            
+
             if blob_client.exists():
                 return Response({'exists': True}, status=status.HTTP_200_OK)
             else:
@@ -192,33 +193,29 @@ class ServePDFFromAzure(APIView):
 class GenerateSASURLView(APIView):
     """
     Generates a SAS URL for a blob path.
-    This replaces the previous logic that checked for container/blob names
-    by simplifying the access to look up a completed form by Patient ID/Form Type.
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         patient_id = request.query_params.get('patient_id')
-        form_type = request.query_params.get('form_type') # e.g., 'IVR_FORM'
+        form_type = request.query_params.get('form_type')
 
         if not patient_id or not form_type:
             return Response({"error": "Missing patient_id or form_type query parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 1. Find the most recent completed ProviderForm for this patient/type
         try:
             patient = get_object_or_404(Patient, pk=patient_id)
             latest_form = ProviderForm.objects.filter(
                 user=request.user,
                 patient=patient,
                 form_type__iexact=form_type,
-                completed=True
+                completed=True  # Changed from completed_form=True
             ).order_by('-date_created').first()
-            
+
             if not latest_form or not latest_form.completed_form_path:
-                # If no form is found, return a specific error/status
                 return Response({
                     "error": "No completed JotForm submission found for this patient.",
-                    "completed_form_path": None, # Signal to the frontend no existing form exists
+                    "completed_form_path": None,
                     "patient_id": patient_id
                 }, status=status.HTTP_404_NOT_FOUND)
 
@@ -226,19 +223,17 @@ class GenerateSASURLView(APIView):
             logger.error(f"Error fetching ProviderForm: {e}")
             return Response({"error": "Database lookup failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # 2. Generate the SAS URL using the stored path
         try:
-            # The completed_form_path should be the full Azure blob name (e.g., 'media/provider-name/...')
             sas_url = generate_sas_url(
                 blob_name=latest_form.completed_form_path,
-                container_name=settings.AZURE_CONTAINER, # Assuming 'media' container
+                container_name=settings.AZURE_CONTAINER,
                 permission='r'
             )
-            
+
             return Response({
                 "sas_url": sas_url,
                 "completed_form_path": latest_form.completed_form_path,
-                "form_data": latest_form.form_data # Optionally return data for review
+                "form_data": latest_form.form_data
             }, status=status.HTTP_200_OK)
 
         except Exception as e:

@@ -20,23 +20,20 @@ from django.core.files.base import ContentFile
 def generate_pdf_from_html(html_content):
     """Generates a PDF file from HTML content using xhtml2pdf."""
     result_file = BytesIO()
-    
-    # Use pisa.pisaDocument to convert HTML to PDF
-    # html_content must be encoded to bytes for BytesIO
+    # Use pisa.pisaDocument to convert HTML to PDF for order pdfs
     pisa_status = pisa.pisaDocument(
         BytesIO(html_content.encode("UTF-8")),
         dest=result_file
     )
-    
+
     # If there are no errors, return the BytesIO object, otherwise return None
     if not pisa_status.err:
         result_file.seek(0)
         return result_file
-    
+
     # Log the error if conversion failed
     print(f"xhtml2pdf error encountered: {pisa_status.err}")
     return None
-# -----------------------------------------------------------
 
 
 class CreateOrderView(generics.CreateAPIView):
@@ -44,30 +41,43 @@ class CreateOrderView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        request.data['provider'] = request.user.id
-        serializer = self.get_serializer(data=request.data)
+        data = request.data.copy()
+        data['provider'] = request.user.id
+
+        order_verified = data.get('order_verified', False)
+
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
+
         self.perform_create(serializer)
 
         order = serializer.instance
-        # Both methods now rely on the new helper function for PDF generation
-        self.send_invoice_email(order)
-        self.save_invoice_to_azure(order)
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        if order_verified:
+            self.send_invoice_email(order)
+            self.save_invoice_to_azure(order)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                {
+                    "message": "Order placed successfully, but is currently PENDING VERIFICATION. No invoice was sent.",
+                    "order_id": order.id
+                },
+                status=status.HTTP_201_CREATED
+            )
 
     def save_invoice_to_azure(self, order):
         try:
             # 1. Render HTML
             html_content = render_to_string('orders/order_invoice.html', {'order': order})
-            
+
             # 2. Generate PDF using xhtml2pdf
             pdf_file_stream = generate_pdf_from_html(html_content)
-            
+
             if not pdf_file_stream:
                 print(f"Skipping Azure upload: Failed to generate PDF for order {order.id}.")
                 return
-
             # Define the blob path
             provider_name = clean_string(order.provider.full_name)
             patient_name = clean_string(order.patient.first_name + " " + order.patient.last_name)
@@ -92,25 +102,26 @@ class CreateOrderView(generics.CreateAPIView):
 
     def send_invoice_email(self, order):
         try:
+            provider = self.request.user
             sales_rep_email = order.provider.profile.sales_rep.email
             recipient_list = [
                 order.provider.email,
                 sales_rep_email,
                 settings.DEFAULT_FROM_EMAIL,
-                'william.chandler21@yahoo.com',
+                # 'william.chandler21@yahoo.com',
                 'harold@promedhealthplus.com',
                 'kayvoncrenshaw@gmail.com',
                 'william.dev@promedhealthplus.com'
             ]
-            
+
             subject = f"Invoice for Order {order.id} || {order.patient.first_name} {order.patient.last_name} || {order.created_at.strftime('%Y-%m-%d')}"
-            
+
             # 1. Render HTML
             html_content = render_to_string('orders/order_invoice.html', {'order': order})
-            
+
             # 2. Generate PDF using xhtml2pdf
             pdf_file_stream = generate_pdf_from_html(html_content)
-            
+
             if not pdf_file_stream:
                 # Send email without attachment if PDF generation failed
                 EmailMessage(
@@ -124,7 +135,10 @@ class CreateOrderView(generics.CreateAPIView):
             # Email with attachment
             email = EmailMessage(
                 subject=subject,
-                body="Please find attached the invoice for your recent order.",
+                body='''
+                    Dear Provider,\n
+                    This email confirms the successful submission of a new order for your patient. Our team is now processing this order and will ensure shipment according to the requested delivery date. If you have any questions regarding this order, please contact your Sales Representative or reply directly to this email. \nThank you for partnering with ProMed Health Plus. \nSincerely, \nThe ProMed Health Plus Team
+                ''',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=recipient_list,
             )
@@ -153,7 +167,7 @@ class ProviderOrderHistoryView(generics.ListAPIView):
     def get_serializer_context(self):
         # Pass request context so the serializer can handle ?all=true logic
         return {'request': self.request}
-    
+
 
 class InvoicePDFView(APIView):
     permission_classes = [permissions.IsAuthenticated]

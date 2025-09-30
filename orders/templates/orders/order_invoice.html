@@ -2,158 +2,215 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Invoice</title>
+    <title>Invoice - Order {{ order.id }}</title>
     <style>
+      @page {
+        size: A4;
+        margin: 1cm;
+      }
       body {
-        font-family: "Lato", Arial, sans-serif;
-        background-color: #ffffff;
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        font-size: 10pt;
+        color: #374151; /* Dark Gray text */
         margin: 0;
-        padding: 0;
-        color: #374151;
       }
-
       .container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 24px;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        max-width: 700pt;
+        margin: auto;
       }
 
-      .header {
-        background-color: #10b981;
-        color: #ffffff;
-        padding: 16px 24px;
-        border-radius: 8px 8px 0 0;
-        text-align: left;
-      }
-
-      .header p {
-        margin-top: 0;
-        margin-bottom: 4px;
-        font-size: 16px;
-      }
-
-      .header h2 {
-        margin: 0;
-        font-size: 28px;
-        font-weight: 700;
-        text-align: center;
-      }
-
-      .content {
-        padding: 24px;
-        font-size: 16px;
-        line-height: 1;
-      }
-
-      .content p {
-        margin-top: 0;
-        margin-bottom: 5px;
-        font-size: 16px;
-      }
-
-      .invoice-info {
-        margin-top: 24px;
-      }
-
-      table {
+      /* --- HEADER STYLES --- */
+      .header-table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 16px;
+        margin-bottom: 20pt;
+        border-bottom: 3pt solid #10b981; /* Teal separator line */
+        padding-bottom: 10pt;
       }
-
-      th,
-      td {
-        border: 1px solid #d1d5db;
-        padding: 8px;
-        text-align: left;
+      .header-table td {
+        padding: 0;
+        vertical-align: top;
       }
-
-      th {
-        background-color: #f3f4f6;
+      .company-info h2 {
+        color: #10b981;
+        font-size: 20pt;
+        font-weight: 700;
+        margin-top: 0;
+        margin-bottom: 5pt;
       }
-
-      .total {
+      .company-info p {
+        margin: 0;
+        font-size: 9pt;
+      }
+      .invoice-meta {
         text-align: right;
-        margin-top: 32px;
-        font-size: 18px;
-        font-weight: bold;
+      }
+      .invoice-meta h1 {
+        font-size: 16pt;
+        color: #1f2937;
+        margin: 0 0 5pt 0;
+      }
+      .invoice-meta p {
+        margin: 0;
+        font-size: 10pt;
+        font-weight: 500;
       }
 
-      .footer {
-        margin-top: 40px;
-        font-size: 12px;
+      /* --- ADDRESS/INFO STYLES --- */
+      .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 25pt;
+      }
+      .info-table th, .info-table td {
+        padding: 8pt 0;
+        text-align: left;
+        font-size: 10pt;
+        vertical-align: top;
+      }
+      .info-section {
+        border: 1pt solid #e5e7eb; /* Light border around sections */
+        padding: 10pt;
+        border-radius: 4pt; /* Standard border radius */
+      }
+      .info-section h3 {
+        color: #10b981;
+        font-size: 11pt;
+        border-bottom: 1pt solid #e5e7eb;
+        padding-bottom: 5pt;
+        margin-top: 0;
+      }
+      .info-table .label {
+        width: 120pt; /* Fixed width for labels */
+        font-weight: 600;
+        color: #1f2937;
+      }
+
+      /* --- ITEMS TABLE STYLES --- */
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20pt;
+      }
+      .items-table th, .items-table td {
+        border: none;
+        padding: 10pt 8pt;
+        text-align: left;
+        border-bottom: 1pt solid #f3f4f6;
+        font-size: 9pt;
+      }
+      .items-table th {
+        background-color: #f3f4f6;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: #4b5563;
+        border-bottom: 2pt solid #d1d5db;
+      }
+
+      /* --- FOOTER STYLES --- */
+      .footer-section {
+        margin-top: 50pt;
+        font-size: 8pt;
         color: #9ca3af;
         text-align: center;
       }
 
-      .order_by{
-        margin-bottom: 5px;
+      /* Ensure text blocks don't have unnecessary margins */
+      .no-margin p, .no-margin strong {
+        margin: 0;
+        line-height: 1.4;
       }
+
     </style>
   </head>
 
   <body>
     <div class="container">
-      <div class="header">
-        <h2><strong>ProMed Health Plus</strong></h2>
-        <p>123 Broad Street</p>
-        <p>Philadelphia, PA 19107</p>
-        <p>(213)555 - 1212</p>
-        <p>
-          Invoice for Order - {{ order.patient.first_name }}
-          {{order.patient.last_name}} || {{ order.created_at|date:"F j, Y" }}
-        </p>
-      </div>
-      <div class="content">
-        <p><strong>Provider Name:</strong> {{ order.provider.full_name }}</p>
-        <p>
-          <strong>Provider Email Address:</strong> {{order.provider.email }}
-        </p>
-        <p>
-          <strong>Provider Phone Number:</strong>
-          {{order.provider.phone_number}}
-        </p>
-        <p><strong>Facility Name:</strong> {{ order.facility_name }}</p>
-        <p><strong>Facility Address:</strong> {{ order.street }}</p>
-        <p>{{order.city}}, {{order.state}} {{order.zip_code}}</p>
 
-        <p>
-          <strong>Date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}
-        </p>
+      <table class="header-table">
+        <tr>
+          <td style="width: 50%;" class="company-info">
+            <h2>ProMed Health Plus</h2>
+            <p>123 Broad Street</p>
+            <p>Philadelphia, PA 19107</p>
+            <p>(213) 555-1212</p>
+          </td>
+          <td style="width: 50%;" class="invoice-meta">
+            <h1>ORDER INVOICE</h1>
+            <p>Invoice # {{ order.id }}</p>
+            <p>Date: {{ order.created_at|date:"F j, Y" }}</p>
+            <p>Requested Delivery: {{ order.delivery_date|default:"TBD" }}</p>
+          </td>
+        </tr>
+      </table>
 
-        <div class="invoice-info">
-          <h3>Order Details</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Manufacturer</th>
-                <th>Quantity</th>
-                <th>Size</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in order.items.all %}
-              <tr>
-                <td>{{ item.product.name }}</td>
-                <td>{{ item.product.manufacturer }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>{{ item.variant.size }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          <p class='order_by'>
-            <strong> Provider Requested Orderby Date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}
-          </p>
-        </div>
+      <table class="info-table">
+        <tr>
+          <td style="width: 50%; padding-right: 10pt;">
+            <div class="info-section">
+              <h3>Provider & Facility Details</h3>
+              <div class="no-margin">
+                <strong>Provider:</strong> {{ order.provider.full_name }}<br>
+                <strong>Email:</strong> {{ order.provider.email }}<br>
+                <strong>Phone:</strong> {{ order.provider.phone_number }}<br>
+                <strong>Facility:</strong> {{ order.facility_name }}
+              </div>
+            </div>
+          </td>
+          <td style="width: 50%; padding-left: 10pt;">
+            <div class="info-section">
+              <h3>Patient & Shipping Address</h3>
+              <div class="no-margin">
+                <strong>Patient:</strong> {{ order.patient.first_name }} {{ order.patient.last_name }}<br>
+                <strong>Ship To:</strong> {{ order.street }}<br> {{ order.country|default:"USA" }}
+
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <h2 style="font-size: 14pt; color: #1f2937; margin-top: 30pt; margin-bottom: 10pt;">Order Details</h2>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width: 40%;">Product</th>
+            <th style="width: 25%;">Manufacturer</th>
+            <th style="width: 15%; text-align: center;">Qty</th>
+            <th style="width: 20%; text-align: right;">Size</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in order.items.all %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.product.manufacturer|default:"N/A" }}</td>
+            <td style="text-align: center;">{{ item.quantity }}</td>
+            <td style="text-align: right;">{{ item.variant.size }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <table style="width: 100%; margin-top: 20pt; border-collapse: collapse;">
+          <tr>
+              <td style="width: 60%; font-size: 10pt; color: #4b5563; padding: 5pt 0; vertical-align: top;">
+                  <p style="margin: 0; font-weight: 600;">Provider Requested Order Date: {{ order.created_at|date:"F j, Y, g:i a" }}</p>
+              </td>
+              <td style="width: 40%; text-align: right; padding: 0;">
+                  <div style="font-size: 12pt; font-weight: bold; background-color: #e0f2f1; padding: 10pt; border-left: 3pt solid #10b981;">
+                      <p style="margin: 0;">TOTAL: ${{ order.total_price|default:"0.00"|floatformat:2 }}</p>
+                  </div>
+              </td>
+          </tr>
+      </table>
+
+
+      <div class="footer-section">
+        <p>This is a computer-generated document. Please contact us with any questions.</p>
+        <p>&copy; {% now "Y" %} ProMed Health Plus. All rights reserved.</p>
       </div>
 
-      <div class="footer">
-        <p>&copy; {{ year }} ProMed Health Plus. All rights reserved.</p>
-      </div>
     </div>
   </body>
 </html>

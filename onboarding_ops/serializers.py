@@ -29,7 +29,7 @@ class DocumentUploadSerializer(serializers.Serializer):
     files = serializers.ListField(
         child=serializers.FileField()
     )
-    
+
     def create(self, validated_data):
         # This method is not implemented because files are handled in the view
         pass

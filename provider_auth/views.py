@@ -120,7 +120,7 @@ class RegisterUser(generics.CreateAPIView):
 
         # verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
         verification_link = f"{LOCAL_HOST}/#/verify-email/{token.token}"
-        
+
         email_html_message = render_to_string(
             'provider_auth/email_verification.html',
             {
@@ -139,18 +139,27 @@ class RegisterUser(generics.CreateAPIView):
 
 class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [AllowAny]
-    
+
     def get(self, request, token):
         if getattr(self, 'swagger_fake_view', False):
             return Response(status=status.HTTP_200_OK)
-            
+
         try:
             verification_token = api_models.EmailVerificationToken.objects.get(token=token)
+
+            # Check if token is expired
+            if verification_token.is_expired():
+                verification_token.delete()
+                return Response(
+                    {"error": "This verification link has expired. Please request a new one."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             user = verification_token.user
 
             if user.is_verified:
                 return Response({"message": "Email already verified."}, status=status.HTTP_200_OK)
-            
+
             user.is_verified = True
             user.save()
             verification_token.delete()
@@ -174,13 +183,13 @@ class VerifyEmailView(generics.GenericAPIView):
             admin_message = render_to_string('provider_auth/new_provider_admin_notification.html', {
                 'user': user,
                 'profile': user.profile,
-                'verification_date': datetime.now()
+                'verification_date': timezone.now()  # Changed from datetime.now()
             })
 
             admin_recipients = [
                 'admin@yourdomain.com',
                 'william.d.chandler1@gmail.com',
-                'kayvoncrenshaw@gmail.com'
+                'kayvoncrenshaw@gmail.com',  # Added missing comma
                 'harold@promedhealthplus.com'
             ]
 
@@ -194,12 +203,62 @@ class VerifyEmailView(generics.GenericAPIView):
             )
 
             return Response(
-                {"message": "Email successfully verified. Your account is now awaiting admin approval."}, 
+                {"message": "Email successfully verified. Your account is now awaiting admin approval."},
                 status=status.HTTP_200_OK
             )
 
         except api_models.EmailVerificationToken.DoesNotExist:
             return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+class ResendVerificationEmailView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+
+        try:
+            user = User.objects.get(email=email)
+
+            if user.is_verified:
+                return Response(
+                    {"message": "Email already verified."},
+                    status=status.HTTP_200_OK
+                )
+
+            # Delete old token and create new one
+            EmailVerificationToken.objects.filter(user=user).delete()
+            token = EmailVerificationToken.objects.create(user=user)
+
+            verification_link = f"{LOCAL_HOST}/#/verify-email/{token.token}"
+
+            email_html_message = render_to_string(
+                'provider_auth/email_verification.html',
+                {
+                    'user': user,
+                    'verification_link': verification_link
+                }
+            )
+
+            send_mail(
+                subject='Verify Your Email Address',
+                message=f"Click the link to verify your email: {verification_link}",
+                html_message=email_html_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False
+            )
+
+            return Response(
+                {"message": "Verification email sent successfully."},
+                status=status.HTTP_200_OK
+            )
+
+        except User.DoesNotExist:
+            # Don't reveal if email exists
+            return Response(
+                {"message": "If the email is registered, a verification link has been sent."},
+                status=status.HTTP_200_OK
+            )
 
 
 class VerifyCodeView(generics.CreateAPIView):
@@ -245,7 +304,7 @@ class ProviderProfileView(generics.RetrieveAPIView, generics.UpdateAPIView): # A
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
-        
+
     def patch(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
@@ -320,7 +379,7 @@ class ContactRepView(generics.CreateAPIView):
                 {'error': 'Failed to send message via email.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
+
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = api_serializers.ResetPasswordSerializer
     permission_classes = [AllowAny]
@@ -352,8 +411,8 @@ class ResetPasswordView(generics.GenericAPIView):
         reset_token.delete()
 
         return Response({'success': 'Password has been reset successfully.'}, status=200)
-    
-    
+
+
 class RequestPasswordResetView(generics.GenericAPIView):
     serializer_class = api_serializers.RequestPasswordResetSerializer
     permission_classes = [AllowAny]
@@ -363,7 +422,7 @@ class RequestPasswordResetView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
 
-        try: 
+        try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             pass
@@ -376,7 +435,7 @@ class RequestPasswordResetView(generics.GenericAPIView):
             # reset_link = f"{LOCAL_HOST}/reset-password/{token.token}/"
             reset_link = f"{LOCAL_HOST}/#/reset-password/{token.token}/"
 
-            html_message = render_to_string('provider_auth/passwordresetemail.html', 
+            html_message = render_to_string('provider_auth/passwordresetemail.html',
                                             {'reset_link': reset_link,
                                              'user': user,
                                              'year': datetime.now().year})
@@ -391,7 +450,7 @@ class RequestPasswordResetView(generics.GenericAPIView):
             )
 
         return Response(response_message, status=200)
-    
+
 class PublicContactView(generics.CreateAPIView):
     serializer_class = api_serializers.PublicContactSerializer
     permission_classes = [permissions.AllowAny]
@@ -399,11 +458,11 @@ class PublicContactView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         data = serializer.validated_data
-        
+
         subject = f"New Public Inquiry from: {data['name']}"
-        
+
         html_message = render_to_string('provider_auth/public_inquiry.html', {
             'name': data['name'],
             'facility': data['facility'],
@@ -415,14 +474,14 @@ class PublicContactView(generics.CreateAPIView):
             'question': data['question'],
             'year': datetime.now().year
         })
-        
+
         recipient_list = list(set([
             'william.d.chandler1@gmail.com',
             'harold@promedhealthplus.com',
             'kayvoncrenshaw@gmail.com',
             'william.dev@promedhealthplus.com'
         ]))
-        
+
         try:
             send_mail(
                 subject=subject,

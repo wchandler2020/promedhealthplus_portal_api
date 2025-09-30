@@ -47,7 +47,7 @@ class User(AbstractUser):
         default='+1',
         help_text="Country dial code for reference (e.g. +1 for US)."
     )
-    phone_number = PhoneNumberField(null=True, blank=True) 
+    phone_number = PhoneNumberField(null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
     state = models.CharField(max_length=100, null=True, blank=True)
     country = models.CharField(max_length=100, null=True, blank=True)
@@ -58,7 +58,7 @@ class User(AbstractUser):
     refresh_token = models.CharField(max_length=1000, null=True, blank=True)
     npi_number = models.CharField(max_length=10, null=True, blank=True)
     is_approved = models.BooleanField(default=False)
-    welcome_email_sent = models.BooleanField(default=False) 
+    welcome_email_sent = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
     is_verified = models.BooleanField(default=False)
@@ -85,7 +85,7 @@ class Profile(models.Model):
     null=True,
     blank=True
     )
-    
+
     full_name = models.CharField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     country = models.CharField(max_length=255, null=True, blank=True)
@@ -119,7 +119,11 @@ class EmailVerificationToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.user.email}"
-    
+
+    def is_expired(self):
+        # token expires after 24 hours
+        return timezone.now() > self.created_at + timezone.timedelta(hours=24)
+
 class PasswordResetToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
@@ -139,9 +143,10 @@ def post_save_profile(sender, instance, **kwargs):
 def send_email_verification_on_create(sender, instance, created, **kwargs):
     # This condition will then pass:
     if created and not instance.is_verified:
-        token, _ = EmailVerificationToken.objects.get_or_create(user=instance)
+        EmailVerificationToken.objects.filter(user=instance).delete()
+        token = EmailVerificationToken.objects.create(user=instance)
         verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
-        
+
         email_html_message = render_to_string(
             'provider_auth/email_verification.html',
             {

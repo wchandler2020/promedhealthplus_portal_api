@@ -8,7 +8,7 @@ urlpatterns = [
     # PROVIDER FORMS (CRUD & related)
     path('forms/', api_views.ProviderFormListCreate.as_view(), name='provider-form-list'),
     path('forms/<int:pk>/', api_views.ProviderFormDetail.as_view(), name='provider-form-detail'),
-    path('forms/sas-url/', api_views.GenerateSASURLView.as_view(), name='generate-sas-url'), 
+    path('forms/sas-url/', api_views.GenerateSASURLView.as_view(), name='generate-sas-url'),
 
     # PROVIDER DOCUMENTS (FOR EMAILING)
     path('documents/upload/', api_views.DocumentUploadView.as_view(), name='document-upload-email'),
