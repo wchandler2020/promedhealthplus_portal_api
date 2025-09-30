@@ -210,6 +210,7 @@ class VerifyEmailView(generics.GenericAPIView):
         except api_models.EmailVerificationToken.DoesNotExist:
             return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
+# Resend code if expired or broken
 class ResendVerificationEmailView(generics.GenericAPIView):
     permission_classes = [AllowAny]
 
