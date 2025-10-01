@@ -20,10 +20,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from twilio.rest import Client
 from dotenv import load_dotenv
-<<<<<<< HEAD
-from weasyprint import HTML
-=======
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
 
 from .models import User, Profile, EmailVerificationToken
 from . import models as api_models
@@ -83,12 +79,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
         )
 
         if method == 'sms' and user.phone_number:
-<<<<<<< HEAD
-            twilio_api_key = os.getenv('TWILIO_API_KEY')
-            twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
-            client = Client(twilio_api_key, twilio_secret_key)
-            client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verifications.create(
-=======
             account_sid = os.getenv('ACCOUNT_SID')
             auth_token = os.getenv('AUTH_TOKEN')
             verify_service_sid = os.getenv('VERIFY_SERVICE_SID')
@@ -96,7 +86,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
             client = Client(account_sid, auth_token)
 
             client.verify.v2.services(verify_service_sid).verifications.create(
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
                 to=str(user.phone_number),
                 channel='sms'
             )
@@ -128,14 +117,9 @@ class RegisterUser(generics.CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         token, created = EmailVerificationToken.objects.get_or_create(user=user)
-
-<<<<<<< HEAD
-        verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
-=======
         # verification_link = f"https://wchandler2020.github.io/promedhealthplus_portal_client/#/verify-email/{token.token}"
         verification_link = f"{LOCAL_HOST}/#/verify-email/{token.token}"
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
-        
+
         email_html_message = render_to_string(
             'provider_auth/email_verification.html',
             {
@@ -154,34 +138,22 @@ class RegisterUser(generics.CreateAPIView):
 
 class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [AllowAny]
-    
+
     def get(self, request, token):
-<<<<<<< HEAD
-        # ⬅️ FIX: Add this line to prevent the drf_yasg error during schema generation
-=======
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
         if getattr(self, 'swagger_fake_view', False):
             return Response(status=status.HTTP_200_OK)
-            
+
         try:
             verification_token = api_models.EmailVerificationToken.objects.get(token=token)
             user = verification_token.user
 
             if user.is_verified:
                 return Response({"message": "Email already verified."}, status=status.HTTP_200_OK)
-<<<<<<< HEAD
 
-            # Mark the user's email as verified
             user.is_verified = True
             user.save()
             verification_token.delete()
 
-=======
-            
-            user.is_verified = True
-            user.save()
-            verification_token.delete()
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
             # Send the new 'awaiting approval' email to the user
             approval_email_html = render_to_string(
                 'provider_auth/awaiting_approval_email.html',
@@ -208,10 +180,7 @@ class VerifyEmailView(generics.GenericAPIView):
             admin_recipients = [
                 'admin@yourdomain.com',
                 'william.d.chandler1@gmail.com',
-<<<<<<< HEAD
-=======
                 'kayvoncrenshaw@gmail.com'
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
                 'harold@promedhealthplus.com'
             ]
 
@@ -225,7 +194,7 @@ class VerifyEmailView(generics.GenericAPIView):
             )
 
             return Response(
-                {"message": "Email successfully verified. Your account is now awaiting admin approval."}, 
+                {"message": "Email successfully verified. Your account is now awaiting admin approval."},
                 status=status.HTTP_200_OK
             )
 
@@ -242,14 +211,11 @@ class VerifyCodeView(generics.CreateAPIView):
         user = request.user
         session_id = request.data.get('session_id')
         code = request.data.get('code')
-<<<<<<< HEAD
-        twilio_api_key = os.getenv('TWILIO_API_KEY')
-        twilio_secret_key = os.getenv('TWILIO_SECRET_KEY')
-=======
+
         account_sid = os.getenv('ACCOUNT_SID')
         auth_token = os.getenv('AUTH_TOKEN')
         verify_service_sid = os.getenv('VERIFY_SERVICE_SID')
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
+
         if not user or not session_id or not code:
             return Response({'error': 'Missing data'}, status=status.HTTP_400_BAD_REQUEST)
         # Check code
@@ -260,13 +226,8 @@ class VerifyCodeView(generics.CreateAPIView):
             return Response({'verified': False, 'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
         # Mark user as verified
         phone_number = str(user.phone_number)
-<<<<<<< HEAD
-        client = Client(twilio_api_key, twilio_secret_key)
-        verification_check = client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verification_checks.create(
-=======
         client = Client(account_sid, auth_token)
         verification_check = client.verify.v2.services(verify_service_sid).verification_checks.create(
->>>>>>> dae334948ed5a989db3f5eb0cd67f3e1ad93746e
         to=phone_number,
         code=code)
         if not verification_check.valid:
@@ -286,7 +247,7 @@ class ProviderProfileView(generics.RetrieveAPIView, generics.UpdateAPIView): # A
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
-        
+
     def patch(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
@@ -361,7 +322,7 @@ class ContactRepView(generics.CreateAPIView):
                 {'error': 'Failed to send message via email.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
+
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = api_serializers.ResetPasswordSerializer
     permission_classes = [AllowAny]
@@ -393,8 +354,8 @@ class ResetPasswordView(generics.GenericAPIView):
         reset_token.delete()
 
         return Response({'success': 'Password has been reset successfully.'}, status=200)
-    
-    
+
+
 class RequestPasswordResetView(generics.GenericAPIView):
     serializer_class = api_serializers.RequestPasswordResetSerializer
     permission_classes = [AllowAny]
@@ -404,7 +365,7 @@ class RequestPasswordResetView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
 
-        try: 
+        try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             pass
@@ -417,7 +378,7 @@ class RequestPasswordResetView(generics.GenericAPIView):
             # reset_link = f"{LOCAL_HOST}/reset-password/{token.token}/"
             reset_link = f"{LOCAL_HOST}/#/reset-password/{token.token}/"
 
-            html_message = render_to_string('provider_auth/passwordresetemail.html', 
+            html_message = render_to_string('provider_auth/passwordresetemail.html',
                                             {'reset_link': reset_link,
                                              'user': user,
                                              'year': datetime.now().year})
@@ -432,7 +393,7 @@ class RequestPasswordResetView(generics.GenericAPIView):
             )
 
         return Response(response_message, status=200)
-    
+
 class PublicContactView(generics.CreateAPIView):
     serializer_class = api_serializers.PublicContactSerializer
     permission_classes = [permissions.AllowAny]
@@ -440,11 +401,11 @@ class PublicContactView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         data = serializer.validated_data
-        
+
         subject = f"New Public Inquiry from: {data['name']}"
-        
+
         html_message = render_to_string('provider_auth/public_inquiry.html', {
             'name': data['name'],
             'facility': data['facility'],
@@ -456,14 +417,14 @@ class PublicContactView(generics.CreateAPIView):
             'question': data['question'],
             'year': datetime.now().year
         })
-        
+
         recipient_list = list(set([
             'william.d.chandler1@gmail.com',
             'harold@promedhealthplus.com',
             'kayvoncrenshaw@gmail.com',
             'william.dev@promedhealthplus.com'
         ]))
-        
+
         try:
             send_mail(
                 subject=subject,
