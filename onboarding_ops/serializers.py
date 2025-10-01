@@ -11,10 +11,10 @@ class ProviderFormSerializer(serializers.ModelSerializer):
         model = ProviderForm
         fields = [
             'id', 'user', 'patient', 'patient_full_name',
-            'form_type', 'submission_id', 'completed_form_path',
+            'form_type', 'submission_id', 'completed_form',
             'form_data', 'date_created', 'completed'
         ]
-        read_only_fields = ['user', 'patient', 'submission_id', 'completed_form_path', 'completed', 'date_created', 'form_data']
+        read_only_fields = ['user', 'patient', 'submission_id', 'completed_form', 'completed', 'date_created', 'form_data']
 
 # Provider Document serializer (No Change)
 class ProviderDocumentSerializer(serializers.ModelSerializer):

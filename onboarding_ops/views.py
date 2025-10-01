@@ -90,13 +90,13 @@ def jotform_webhook(request):
             submission_id=submission_id,
             defaults={
                 'form_type': form_name,
-                'completed_form_path': blob_path,
+                'completed_form': blob_path,
                 'form_data': form_data,
                 'completed': True,
             }
         )
         if not created:
-            form.completed_form_path = blob_path
+            form.completed_form = blob_path
             form.form_data = form_data
             form.completed = True
             form.save()
@@ -215,7 +215,7 @@ class GenerateSASURLView(APIView):
                 completed=True
             ).order_by('-date_created').first()
 
-            if not latest_form or not latest_form.completed_form_path:
+            if not latest_form or not latest_form.completed_form:
                 # If no form is found, return a specific error/status
                 return Response({
                     "error": "No completed JotForm submission found for this patient.",
@@ -231,14 +231,14 @@ class GenerateSASURLView(APIView):
         try:
             # The completed_form_path should be the full Azure blob name (e.g., 'media/provider-name/...')
             sas_url = generate_sas_url(
-                blob_name=latest_form.completed_form_path,
+                blob_name=latest_form.completed_form,
                 container_name=settings.AZURE_CONTAINER, # Assuming 'media' container
                 permission='r'
             )
 
             return Response({
                 "sas_url": sas_url,
-                "completed_form_path": latest_form.completed_form_path,
+                "completed_form_path": latest_form.completed_form,
                 "form_data": latest_form.form_data # Optionally return data for review
             }, status=status.HTTP_200_OK)
 

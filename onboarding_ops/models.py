@@ -19,7 +19,6 @@ def provider_document_upload_path(instance, filename):
     doc_type_slug = slugify(instance.document_type or 'document')
     return f'documents/{provider_slug}/{doc_type_slug}/{uuid.uuid4()}-{filename}'
 
-# --- MODELS ---
 class ProviderForm(models.Model):
     """
     Model for completed forms submitted via Jotform.
@@ -30,6 +29,7 @@ class ProviderForm(models.Model):
     form_type = models.CharField(max_length=100, help_text="e.g., 'New Account Form', 'IVR Report'")
     submission_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     completed_form = models.FileField(upload_to=provider_form_upload_path, null=True, blank=True)
+    completed = models.BooleanField(default=False)
     form_data = models.JSONField(null=True, blank=True, help_text="A snapshot of the form's data.")
     date_created = models.DateTimeField(auto_now_add=True)
 

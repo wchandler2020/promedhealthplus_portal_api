@@ -246,25 +246,22 @@ AZURE_CONTAINER = 'media'
 
 LOCAL_HOST = 'http://localhost:3000'
 
+AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
+AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
+
+# Static files root directory
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.azure_storage.AzureStorage",
-        "OPTIONS": {
-            "account_name": AZURE_ACCOUNT_NAME,
-            "account_key": AZURE_ACCOUNT_KEY,
-            "azure_container": 'media',
-        },
+        "BACKEND": "promed_backend_api.storage_backends.AzureMediaStorage",
     },
     "staticfiles": {
-        "BACKEND": "storages.backends.azure_storage.AzureStorage",
-        "OPTIONS": {
-            "account_name": AZURE_ACCOUNT_NAME,
-            "account_key": AZURE_ACCOUNT_KEY,
-            "azure_container": 'static',
-        },
+        "BACKEND": "promed_backend_api.storage_backends.AzureStaticStorage",
     },
 }
 
+# Azure URLs
 AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
 STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/static/'
 MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/media/'
