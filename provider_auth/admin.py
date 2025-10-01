@@ -9,6 +9,13 @@ from django.utils.translation import gettext_lazy as _
 from .models import User, Profile, EmailVerificationToken
 
 
+class ProfileInLine(admin.StackedInline):
+    model = Profile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+    fk_name = 'user'
+
+
 class AdminUserCreationForm(forms.ModelForm):
     """
     Custom form for creating users in the admin.
@@ -38,15 +45,17 @@ class AdminUserCreationForm(forms.ModelForm):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    inlines = (ProfileInLine,)
     add_form = AdminUserCreationForm
+
     list_display = (
-        'email', 
-        'full_name', 
+        'email',
+        'full_name',
         'role',
         'npi_number',
-        'is_verified', 
+        'is_verified',
         'is_approved',
-        'is_active', 
+        'is_active',
         'is_staff',
     )
     search_fields = ('email', 'full_name', 'npi_number')
@@ -60,16 +69,21 @@ class UserAdmin(BaseUserAdmin):
         ('Permissions', {
             'fields': (
                 'role',
-                'is_active', 
-                'is_approved', 
-                'is_staff', 
-                'is_superuser', 
-                'groups', 
+                'is_active',
+                'is_approved',
+                'is_staff',
+                'is_superuser',
+                'groups',
                 'user_permissions'
             )
         }),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
+
+    def get_inline_instances(self, request, obj=None):
+        if not obj:
+            return []
+        return super().get_inline_instances(request, obj)
 
     add_fieldsets = (
         (None, {
@@ -110,5 +124,3 @@ class UserAdmin(BaseUserAdmin):
                 recipient_list=[obj.email],
                 fail_silently=False
             )
-
-admin.site.register(Profile)

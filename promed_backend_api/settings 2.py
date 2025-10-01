@@ -12,8 +12,8 @@ load_dotenv()
 sentry_sdk.init(
     dsn="https://e8b8032c2344202bda64fc938e4dc5db@o4509803038113792.ingest.us.sentry.io/4509803039031296",
     integrations=[DjangoIntegration()],
-    traces_sample_rate=1.0,
-    send_default_pii=True
+    traces_sample_rate=1.0,  
+    send_default_pii=True    
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -117,7 +117,7 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'core.validators.HIPAAPasswordValidator',
+        'NAME': 'core.validators.HIPAAPasswordValidator', 
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -270,4 +270,3 @@ STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/static/'
 MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/media/'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-
